@@ -4,9 +4,17 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:ui": "vite",
+    "dev:api": "node server/index.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/index.mjs",
+    "test": "node --test",
+    "ingest": "node scripts/ingest-policies.mjs",
+    "validate:data": "node scripts/ingest-policies.mjs --check",
+    "evaluate": "node scripts/evaluate.mjs",
+    "verify": "npm run validate:data && npm run build && npm test && npm run evaluate && git diff --check"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -1,0 +1,98 @@
+[
+  {
+    "documentId": "attendance",
+    "title": "Attendance & absences",
+    "organization": "PolicyLens demo school",
+    "sourceType": "synthetic",
+    "source": "samples/attendance-handbook.txt",
+    "sourceUrl": null,
+    "publicationDate": null,
+    "retrievalDate": null,
+    "sourceRightsNote": "Synthetic content created for the PolicyLens demo.",
+    "summary": "A small, clearly labelled policy excerpt for demonstrating grounded answers.",
+    "chunks": [
+      {
+        "chunkId": "attendance:attendance-window",
+        "documentId": "attendance",
+        "section": "Reporting an absence",
+        "page": null,
+        "text": "A parent or guardian should notify the school before 9:00 a.m. on a day the student will be absent.",
+        "sourceUrl": null,
+        "ordinal": 0
+      },
+      {
+        "chunkId": "attendance:attendance-note",
+        "documentId": "attendance",
+        "section": "After returning",
+        "page": null,
+        "text": "Students should bring an absence note to the attendance office within three school days of returning.",
+        "sourceUrl": null,
+        "ordinal": 1
+      }
+    ]
+  },
+  {
+    "documentId": "devices",
+    "title": "Personal devices",
+    "organization": "PolicyLens demo school",
+    "sourceType": "synthetic",
+    "source": "samples/student-handbook.txt",
+    "sourceUrl": null,
+    "publicationDate": null,
+    "retrievalDate": null,
+    "sourceRightsNote": "Synthetic content created for the PolicyLens demo.",
+    "summary": "A synthetic device rule used to test evidence and not-found behavior.",
+    "chunks": [
+      {
+        "chunkId": "devices:device-class",
+        "documentId": "devices",
+        "section": "During class",
+        "page": null,
+        "text": "Personal phones and smart devices should be silenced and kept in a student bag during lessons unless a teacher gives permission.",
+        "sourceUrl": null,
+        "ordinal": 0
+      },
+      {
+        "chunkId": "devices:device-exception",
+        "documentId": "devices",
+        "section": "Support exceptions",
+        "page": null,
+        "text": "A student may use a device for an approved medical or accessibility need after arranging a plan with the school.",
+        "sourceUrl": null,
+        "ordinal": 1
+      }
+    ]
+  },
+  {
+    "documentId": "accessibility",
+    "title": "Accessibility & support",
+    "organization": "PolicyLens demo school",
+    "sourceType": "synthetic",
+    "source": "samples/accessibility-guide.txt",
+    "sourceUrl": null,
+    "publicationDate": null,
+    "retrievalDate": null,
+    "sourceRightsNote": "Synthetic content created for the PolicyLens demo.",
+    "summary": "A synthetic support guide for demonstrating accommodation-related questions.",
+    "chunks": [
+      {
+        "chunkId": "accessibility:support-plan",
+        "documentId": "accessibility",
+        "section": "Requesting support",
+        "page": null,
+        "text": "Students and families can contact the school support team to discuss an accessibility plan for classroom participation.",
+        "sourceUrl": null,
+        "ordinal": 0
+      },
+      {
+        "chunkId": "accessibility:support-review",
+        "documentId": "accessibility",
+        "section": "Reviewing support",
+        "page": null,
+        "text": "The support team can review an accessibility plan when a student’s classroom needs change.",
+        "sourceUrl": null,
+        "ordinal": 1
+      }
+    ]
+  }
+]
