@@ -1,14 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { join, resolve } from 'node:path'
 import { resolveStaticPath } from './static-assets.mjs'
 
-const distRoot = 'C:\\project\\dist'
+const distRoot = resolve('test-fixtures', 'dist')
 
 test('resolves the root request to the built index', () => {
   const result = resolveStaticPath(distRoot, '/')
 
   assert.equal(result.kind, 'file')
-  assert.equal(result.path.endsWith('dist\\index.html'), true)
+  assert.equal(result.path, join(distRoot, 'index.html'))
   assert.equal(result.contentType, 'text/html; charset=utf-8')
 })
 
