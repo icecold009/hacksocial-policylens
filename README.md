@@ -35,6 +35,12 @@ npm run verify
 
 The app is intentionally small and dependency-light for an older laptop. The current local demo uses the React UI plus a local server-side answer boundary and does not require credentials, a database, or an AI provider.
 
+## Development workflow
+
+PolicyLens uses one bounded package per `codex/*` feature branch and pull request. `TODO.md` is the only active implementation queue; repository instructions, GitHub issue/PR handoff, automated verification, Codex review/fix comments, merge approval, deployment, and the final audit are defined in [`docs/hackathon-workflow.md`](docs/hackathon-workflow.md).
+
+Agents must follow [`AGENTS.md`](AGENTS.md). No package is merged, deployed, or submitted to Devpost without explicit user approval.
+
 ## Current MVP scope
 
 - Choose between three clearly labelled synthetic sample policies.

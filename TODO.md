@@ -67,6 +67,10 @@ This is the working checklist for turning the current React/Vite MVP into a comp
 - [x] Confirm the initial working tree is clean before implementation.
 - [x] Keep unrelated changes out of this branch.
 - [x] Create logical commits for coherent milestones.
+- [x] Keep `TODO.md` as the sole active queue and add the repository-owned Codex/GitHub orchestration contract.
+- [x] Define deterministic pull-request verification with `.github/workflows/verify.yml`.
+- [ ] Connect the repository to a reproducible Codex cloud environment and enable automatic Code review.
+- [ ] Protect `main` with required pull requests, the `verify` check, resolved review conversations, and blocked force pushes.
 - [ ] Push useful completed checkpoints when implementation is authorized.
 - [ ] Keep merge-to-`main` as a separate approval gate.
 
@@ -338,6 +342,7 @@ Suggested targets:
 - [x] Keep synthetic sources clearly labelled.
 - [x] Document known limitations.
 - [x] Document that PolicyLens is an explainer, not official school, legal, or medical guidance.
+- [ ] Triage and remediate the current Vite/esbuild development-server advisories in a separate dependency package before public preview. Evidence: `npm audit` on 2026-08-27 reported one high and one moderate vulnerability and a semver-major Vite fix; keep the Vite development server private and re-run `npm audit` plus `npm run verify` after the upgrade.
 
 ## Milestone 7 — Deployment and operations
 

@@ -1,0 +1,96 @@
+name: Codex implementation package
+description: Define one bounded, verifiable package for Codex cloud.
+title: "[PL package] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for one coherent branch and pull request. `TODO.md` is the canonical queue; link its exact entries rather than creating a parallel plan here.
+
+  - type: input
+    id: package_id
+    attributes:
+      label: Package ID
+      description: Use a short stable ID, such as PL-DEPLOY-01.
+      placeholder: PL-...
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: State the user-visible or release result, not a list of coding steps.
+      placeholder: When this package is complete...
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      description: Name the behavior, files, interfaces, or documentation this package may change.
+      placeholder: |
+        - Behavior:
+        - Likely files:
+        - Allowed configuration changes:
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: List adjacent work Codex must leave alone.
+      placeholder: |
+        - Do not...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Give observable criteria that can be checked after implementation.
+      placeholder: |
+        - [ ] A user can...
+        - [ ] Failure state...
+        - [ ] TODO evidence updated...
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Include exact commands and separate any browser, preview, hosted, device, or manual evidence.
+      value: |
+        - [ ] `npm run verify`
+        - [ ] Browser/manual check, if UI changes:
+        - [ ] Hosted check, if deployment changes:
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Current evidence and dependencies
+      description: Link TODO entries, issues, PRs, screenshots, errors, decisions, or prerequisite packages.
+      placeholder: |
+        - TODO.md > ...
+        - Depends on...
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Human-controlled gates
+      description: These actions remain outside the implementation package unless the user separately approves them.
+      options:
+        - label: Do not merge this pull request.
+          required: true
+        - label: Do not deploy or change production settings.
+          required: true
+        - label: Do not submit or update the Devpost entry.
+          required: true
+        - label: Do not add credentials or expose secret values.
+          required: true
