@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { samplePolicies } from './data/policies.js'
 import { createAnswerResponse, validateAnswerResponse } from './lib/answer-contract.js'
 import { retrieveEvidence } from './lib/retrieval.js'
@@ -70,6 +70,20 @@ function App() {
   const [copyState, setCopyState] = useState('idle')
   const [comparisonResult, setComparisonResult] = useState(null)
   const [result, setResult] = useState(() => createDefaultResponse(samplePolicies[0]))
+  const requestSequence = useRef(0)
+  const activeRequestController = useRef(null)
+
+  function cancelPendingRequest() {
+    requestSequence.current += 1
+    activeRequestController.current?.abort()
+    activeRequestController.current = null
+    setIsLoading(false)
+  }
+
+  useEffect(() => () => {
+    requestSequence.current += 1
+    activeRequestController.current?.abort()
+  }, [])
 
   const selectedPolicy = useMemo(
     () => samplePolicies.find((policy) => policy.id === selectedId) ?? samplePolicies[0],
@@ -82,6 +96,7 @@ function App() {
   )
 
   function handlePolicyChange(event) {
+    cancelPendingRequest()
     setSelectedId(event.target.value)
     setCustomSource(null)
     setComparisonId('')
@@ -97,6 +112,7 @@ function App() {
     const trimmedUrl = publicUrl.trim()
     if (!trimmedUrl) return
 
+    cancelPendingRequest()
     setCustomSource({
       id: 'public-policy-url',
       title: 'Public policy link',
@@ -120,6 +136,7 @@ function App() {
   }
 
   function handleResetSource() {
+    cancelPendingRequest()
     setCustomSource(null)
     setPublicUrl('')
     setComparisonId('')
@@ -130,6 +147,7 @@ function App() {
   }
 
   function handleExampleQuestion(exampleQuestion) {
+    cancelPendingRequest()
     setQuestion(exampleQuestion)
     setHasAsked(false)
     setCopyState('idle')
@@ -137,6 +155,7 @@ function App() {
   }
 
   async function handleAsk(event) {
+    if (isLoading) return
     event.preventDefault()
     setHasAsked(true)
     setCopyState('idle')
@@ -151,6 +170,10 @@ function App() {
     }
 
     setIsLoading(true)
+    const requestId = requestSequence.current + 1
+    requestSequence.current = requestId
+    const controller = new AbortController()
+    activeRequestController.current = controller
 
     async function requestAnswer(policy) {
       try {
@@ -158,10 +181,12 @@ function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ policyId: policy.id, question }),
+          signal: controller.signal,
         })
         const payload = await response.json()
         return keepValidResponse(payload, policy)
-      } catch {
+      } catch (error) {
+        if (error?.name === 'AbortError') return null
         return createServiceErrorResponse(policy, 'API_UNAVAILABLE', 'The local answer service is unavailable. Try again in a moment.')
       }
     }
@@ -169,12 +194,16 @@ function App() {
     try {
       const policies = [activePolicy, comparisonPolicy].filter(Boolean)
       const responses = await Promise.all(policies.map(requestAnswer))
+      if (requestSequence.current !== requestId || !responses[0]) return
       setResult(responses[0])
       if (responses[1] && comparisonPolicy) {
         setComparisonResult({ policy: comparisonPolicy, response: responses[1] })
       }
     } finally {
-      setIsLoading(false)
+      if (requestSequence.current === requestId) {
+        activeRequestController.current = null
+        setIsLoading(false)
+      }
     }
   }
 
@@ -219,7 +248,7 @@ function App() {
         <aside className="source-panel panel">
           <div className="panel-label"><span>01</span> CHOOSE A SOURCE</div>
           <label className="field-label" htmlFor="policy-select">Sample policy document</label>
-          <select id="policy-select" value={selectedId} onChange={handlePolicyChange}>
+          <select id="policy-select" value={selectedId} onChange={handlePolicyChange} disabled={isLoading}>
             {samplePolicies.map((policy) => <option key={policy.id} value={policy.id}>{policy.title}</option>)}
           </select>
           <div className="source-card">
@@ -230,7 +259,7 @@ function App() {
               <code>{activePolicy.source}</code>
             </div>
           </div>
-          {customSource && <button className="source-reset" type="button" onClick={handleResetSource}>Back to sample policies <span aria-hidden="true">↩</span></button>}
+          {customSource && <button className="source-reset" type="button" onClick={handleResetSource} disabled={isLoading}>Back to sample policies <span aria-hidden="true">↩</span></button>}
           <div className="source-details" aria-label="Source metadata">
             <span>{activePolicy.organization}</span>
             <span>{activePolicy.sourceType === 'synthetic' ? 'Synthetic source' : 'External URL'}</span>
@@ -241,8 +270,8 @@ function App() {
           <div className="divider" />
           <form className="url-form" onSubmit={handleUsePublicUrl}>
             <label className="field-label" htmlFor="public-url">Or provide a public policy URL</label>
-            <input id="public-url" type="url" value={publicUrl} onChange={(event) => setPublicUrl(event.target.value)} placeholder="https://school.example/policy.pdf" />
-            <button className="secondary-button" type="submit">Use public URL <span aria-hidden="true">↗</span></button>
+            <input id="public-url" type="url" value={publicUrl} onChange={(event) => setPublicUrl(event.target.value)} placeholder="https://school.example/policy.pdf" disabled={isLoading} />
+            <button className="secondary-button" type="submit" disabled={isLoading}>Use public URL <span aria-hidden="true">↗</span></button>
           </form>
           <p className="privacy-note"><span aria-hidden="true">↳</span> This MVP keeps the demo local. External documents are not fetched yet.</p>
         </aside>
@@ -265,12 +294,12 @@ function App() {
           </form>
 
           {!customSource && <div className="compare-control">
-            <button className="compare-toggle" type="button" onClick={() => { setComparisonId(comparisonId ? '' : samplePolicies.find((policy) => policy.id !== selectedId)?.id ?? '') }} aria-expanded={Boolean(comparisonId)} aria-controls="compare-panel">
+            <button className="compare-toggle" type="button" onClick={() => { setComparisonId(comparisonId ? '' : samplePolicies.find((policy) => policy.id !== selectedId)?.id ?? '') }} aria-expanded={Boolean(comparisonId)} aria-controls="compare-panel" disabled={isLoading}>
               {comparisonId ? 'Hide policy comparison' : 'Compare with another sample policy'} <span aria-hidden="true">{comparisonId ? '−' : '+'}</span>
             </button>
             {comparisonId && <div className="compare-panel" id="compare-panel">
               <label className="field-label" htmlFor="compare-select">Second policy</label>
-              <select id="compare-select" value={comparisonId} onChange={(event) => { setComparisonId(event.target.value); setComparisonResult(null) }}>
+              <select id="compare-select" value={comparisonId} onChange={(event) => { setComparisonId(event.target.value); setComparisonResult(null) }} disabled={isLoading}>
                 {samplePolicies.filter((policy) => policy.id !== selectedId).map((policy) => <option key={policy.id} value={policy.id}>{policy.title}</option>)}
               </select>
               <p>Ask once to see how both documents address the same question.</p>
@@ -286,7 +315,7 @@ function App() {
             </ol>
           </section>
 
-          <section className="answer-panel panel" aria-live="polite" aria-atomic="true">
+          <section className="answer-panel panel" aria-live="polite" aria-atomic="true" aria-busy={isLoading}>
             <div className="answer-header">
               <div className="panel-label"><span>03</span> GROUNDED RESPONSE</div>
               <span className={`status-pill status-${hasAsked ? result.status : 'ready'}`}>
@@ -385,4 +414,5 @@ function App() {
 }
 
 export default App
+
 

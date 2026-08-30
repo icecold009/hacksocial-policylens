@@ -37,4 +37,5 @@ This is local browser evidence, not proof of hosted, incognito, keyboard-only, o
 
 ## Development-server note
 
-The production-style `npm start` path is verified. In this managed OneDrive sandbox, `npm run dev` starts Vite but then exits when esbuild tries to resolve React’s development CJS files, reporting `Cannot read directory "../../../..": Access is denied.` The files are present and the same source builds and serves successfully through `npm run build && npm start`; the dev-server item remains open until it is reproduced outside this sandbox or fixed with a confirmed Vite configuration change.
+After the Vite 8.2.2 upgrade, `npm run dev:ui -- --host 127.0.0.1 --port 5174` reached the Vite ready state locally. The production-style `npm start` path also remains verified. Hosted and incognito browser behavior are still separate release gates.
+

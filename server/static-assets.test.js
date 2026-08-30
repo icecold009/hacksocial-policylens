@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveStaticPath } from './static-assets.mjs'
+import { getContentType, resolveStaticPath } from './static-assets.mjs'
 
 const distRoot = 'C:\\project\\dist'
 
@@ -19,3 +19,9 @@ test('rejects encoded traversal outside the build directory', () => {
 test('reports malformed URL encoding without exposing filesystem details', () => {
   assert.deepEqual(resolveStaticPath(distRoot, '/%not-valid'), { kind: 'bad_request' })
 })
+
+test('derives content types from the final asset path', () => {
+  assert.equal(getContentType('C:\\project\\dist\\assets\\index.js'), 'text/javascript; charset=utf-8')
+  assert.equal(getContentType('C:\\project\\dist\\unknown.bin'), 'application/octet-stream')
+})
+

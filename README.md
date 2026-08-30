@@ -25,6 +25,10 @@ npm run build
 npm start
 ```
 
+The server uses `POLICYLENS_API_PORT=8787` and `127.0.0.1` for local defaults. Hosting platforms can provide their usual `PORT` value; when `PORT` is present, the server listens on `0.0.0.0` unless `POLICYLENS_API_HOST` or `HOST` overrides it. `/healthz` reports a degraded response until the production build exists.
+
+The optional provider endpoint must use HTTPS outside local development. If the application runs behind a trusted reverse proxy, set `POLICYLENS_TRUST_PROXY=true` so rate limiting can use the first `X-Forwarded-For` address; leave it false when proxy headers are not controlled by the deployment.
+
 Verification commands:
 
 ```bash
@@ -51,7 +55,7 @@ The app is intentionally small and dependency-light for an older laptop. The cur
 - `src/data/policies.js` contains the synthetic policy documents and source metadata.
 - `src/lib/retrieval.js` normalizes queries, ranks evidence candidates, and enforces empty, oversized, not-found, and ambiguity states.
 - `src/lib/answer-contract.js` builds and validates the response shape that the UI renders.
-- `scripts/ingest-policies.mjs` validates document/chunk metadata and produces the reviewable normalized corpus at `data/processed/policies.json`.
+- `src/data/policies.js` is the canonical runtime policy source. `scripts/ingest-policies.mjs` validates it and produces the reviewable normalized corpus at `data/processed/policies.json`, including the retrieval and fallback-answer fields used by the runtime.
 - `server/answer-service.mjs` exposes the local `POST /api/answer` boundary with request-size, method, JSON, policy, and response validation.
 - `server/provider.mjs` contains the optional environment-configured provider adapter, exact-citation check, timeout, bounded retry, and local fallback behavior.
 - Development-only retrieval diagnostics can be requested through the server helper with `NODE_ENV=development` and `includeDiagnostics: true`; they contain candidate IDs and scores, never source quotes.
@@ -101,4 +105,5 @@ The answer contract is:
 - [ ] Add an authorized public repository URL, live demo, screenshots, and demo video.
 
 The local Devpost draft and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They contain explicit placeholders until publication and media capture are authorized.
+
 

@@ -2,13 +2,27 @@ import { validateAnswerResponse } from '../src/lib/answer-contract.js'
 
 export const PROVIDER_TIMEOUT_MS = 6000
 export const PROVIDER_MAX_ATTEMPTS = 2
+export const PROVIDER_MAX_RESPONSE_BYTES = 32 * 1024
+export const PROVIDER_MAX_ENDPOINT_LENGTH = 2_048
 
 function providerConfig(environment) {
-  const endpoint = environment.POLICYLENS_AI_ENDPOINT
-  const apiKey = environment.POLICYLENS_AI_API_KEY
-  const model = environment.POLICYLENS_AI_MODEL
+  const endpoint = String(environment.POLICYLENS_AI_ENDPOINT ?? '').trim()
+  const apiKey = String(environment.POLICYLENS_AI_API_KEY ?? '').trim()
+  const model = String(environment.POLICYLENS_AI_MODEL ?? '').trim()
 
-  return endpoint && apiKey && model ? { endpoint, apiKey, model } : null
+  if (!endpoint || !apiKey || !model || endpoint.length > PROVIDER_MAX_ENDPOINT_LENGTH) return null
+
+  try {
+    const endpointUrl = new URL(endpoint)
+    const localDevelopmentEndpoint = environment.NODE_ENV === 'development'
+      && endpointUrl.protocol === 'http:'
+      && ['127.0.0.1', 'localhost'].includes(endpointUrl.hostname)
+    if (endpointUrl.protocol !== 'https:' && !localDevelopmentEndpoint) return null
+  } catch {
+    return null
+  }
+
+  return { endpoint, apiKey, model }
 }
 
 export function buildProviderMessages(question, policy, candidates) {
@@ -60,6 +74,34 @@ function parseProviderContent(content) {
   }
 }
 
+function canonicalizeProviderResponse(response) {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return null
+
+  return {
+    status: response.status,
+    answer: response.answer,
+    evidence: response.evidence,
+    evidenceStrength: response.evidenceStrength,
+    nextStep: response.nextStep,
+    disclaimer: response.disclaimer,
+  }
+}
+
+async function readProviderPayload(response) {
+  const declaredLength = Number(response.headers?.get?.('content-length'))
+  if (Number.isFinite(declaredLength) && declaredLength > PROVIDER_MAX_RESPONSE_BYTES) return null
+  if (typeof response.text !== 'function') return null
+
+  const body = await response.text()
+  if (Buffer.byteLength(body, 'utf8') > PROVIDER_MAX_RESPONSE_BYTES) return null
+
+  try {
+    return JSON.parse(body)
+  } catch {
+    return null
+  }
+}
+
 export async function requestProviderAnswer({
   question,
   policy,
@@ -92,11 +134,12 @@ export async function requestProviderAnswer({
       if ((response.status === 429 || response.status >= 500) && attempt < PROVIDER_MAX_ATTEMPTS - 1) continue
       if (!response.ok) return null
 
-      const payload = await response.json()
+      const payload = await readProviderPayload(response)
       const parsed = parseProviderContent(payload?.choices?.[0]?.message?.content)
-      if (!parsed || !isGroundedProviderResponse(parsed, policy, candidates)) return null
+      const canonical = canonicalizeProviderResponse(parsed)
+      if (!canonical || !isGroundedProviderResponse(canonical, policy, candidates)) return null
 
-      return { ...parsed, answerSource: 'provider' }
+      return { ...canonical, answerSource: 'provider' }
     } catch {
       if (attempt === PROVIDER_MAX_ATTEMPTS - 1) return null
     } finally {
@@ -106,3 +149,4 @@ export async function requestProviderAnswer({
 
   return null
 }
+

@@ -16,6 +16,10 @@ test('produces stable document and chunk metadata for the reviewable corpus', ()
   assert.equal(processed[0].chunks[0].documentId, processed[0].documentId)
   assert.equal(processed[0].chunks[0].section, 'Reporting an absence')
   assert.equal(processed[0].chunks[0].text, samplePolicies[0].sections[0].text)
+  assert.deepEqual(processed[0].chunks[0].keywords, samplePolicies[0].sections[0].keywords)
+  assert.equal(processed[0].chunks[0].answer, samplePolicies[0].sections[0].answer)
+  assert.equal(processed[0].chunks[0].nextStep, samplePolicies[0].sections[0].nextStep)
+  assert.equal(processed[0].chunks[0].exampleQuestion, samplePolicies[0].sections[0].exampleQuestion)
   assert.equal(processed[0].chunks[0].ordinal, 0)
 })
 
@@ -38,3 +42,4 @@ test('requires a source URL for non-synthetic documents', () => {
 
   assert.throws(() => validatePolicies([externalPolicy]), /missing source URL/)
 })
+

@@ -338,6 +338,7 @@ Suggested targets:
 - [x] Keep synthetic sources clearly labelled.
 - [x] Document known limitations.
 - [x] Document that PolicyLens is an explainer, not official school, legal, or medical guidance.
+- [x] Remediate the Vite/esbuild development-server advisories before public preview. Evidence: `npm audit` on 2026-08-28 reports 0 vulnerabilities after upgrading to Vite 8.2.2 and `@vitejs/plugin-react` 6.1.1; `npm run verify` and a Vite development-server startup check pass on `codex/pl-pre-submission-hardening`.
 
 ## Milestone 7 — Deployment and operations
 
@@ -448,3 +449,4 @@ PolicyLens is ready to submit when a judge can:
 - [ ] Multi-language support.
 - [ ] Complex analytics dashboard.
 - [ ] Broad policy coverage beyond the polished demo scenarios.
+

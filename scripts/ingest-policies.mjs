@@ -14,6 +14,8 @@ export function validatePolicies(policies) {
   const documentIds = new Set()
   const chunkIds = new Set()
 
+  if (!Array.isArray(policies)) throw new Error('Policies must be an array.')
+
   policies.forEach((policy) => {
     if (!policy.id || documentIds.has(policy.id)) errors.push(`duplicate or missing document id: ${policy.id || '<empty>'}`)
     documentIds.add(policy.id)
@@ -29,6 +31,7 @@ export function validatePolicies(policies) {
       if (!section.id || chunkIds.has(chunkId)) errors.push(`duplicate or missing chunk id: ${chunkId}`)
       chunkIds.add(chunkId)
       if (!section.heading) errors.push(`missing section heading: ${chunkId}`)
+      if (!Array.isArray(section.keywords) || section.keywords.length === 0) errors.push(`missing section keywords: ${chunkId}`)
       if (!normalizeWhitespace(section.text)) errors.push(`empty section text: ${chunkId}`)
       if (!section.answer) errors.push(`missing section answer: ${chunkId}`)
     })
@@ -56,6 +59,10 @@ export function createProcessedPolicies(policies) {
       section: section.heading,
       page: null,
       text: normalizeWhitespace(section.text),
+      keywords: section.keywords,
+      answer: section.answer,
+      nextStep: section.nextStep ?? '',
+      exampleQuestion: section.exampleQuestion ?? '',
       sourceUrl: policy.sourceUrl,
       ordinal: index,
     })),
@@ -82,3 +89,4 @@ export async function runIngestion({ checkOnly = false } = {}) {
 if (process.argv[1] && resolvePath(process.argv[1]) === resolvePath(fileURLToPath(import.meta.url))) {
   console.log(await runIngestion({ checkOnly: process.argv.includes('--check') }))
 }
+

@@ -16,6 +16,10 @@ const CONTENT_TYPES = Object.freeze({
   '.svg': 'image/svg+xml',
 })
 
+export function getContentType(filePath) {
+  return CONTENT_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+}
+
 export function resolveStaticPath(distRoot, requestPath) {
   let decodedPath
   try {
@@ -32,7 +36,8 @@ export function resolveStaticPath(distRoot, requestPath) {
   return {
     kind: 'file',
     path: candidate,
-    contentType: CONTENT_TYPES[extname(candidate).toLowerCase()] ?? 'application/octet-stream',
+    contentType: getContentType(candidate),
     hasExtension: Boolean(extname(decodedPath)),
   }
 }
+

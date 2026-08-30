@@ -3,9 +3,10 @@ import { readFile, stat } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { handleAnswerRequest } from './answer-service.mjs'
-import { SECURITY_HEADERS, resolveStaticPath } from './static-assets.mjs'
+import { getContentType, SECURITY_HEADERS, resolveStaticPath } from './static-assets.mjs'
+import { resolveServerConfig } from './runtime-config.mjs'
 
-const port = Number(process.env.POLICYLENS_API_PORT ?? 8787)
+const { host, port } = resolveServerConfig()
 const distRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../dist')
 
 function sendJson(response, statusCode, body) {
@@ -58,7 +59,7 @@ async function serveStatic(request, response) {
     response.writeHead(200, {
       ...SECURITY_HEADERS,
       'Cache-Control': filePath.endsWith('index.html') ? 'no-store' : 'public, max-age=3600',
-      'Content-Type': filePath.endsWith('index.html') ? 'text/html; charset=utf-8' : resolved.contentType,
+      'Content-Type': getContentType(filePath),
     })
     response.end(request.method === 'HEAD' ? undefined : body)
   } catch {
@@ -66,13 +67,34 @@ async function serveStatic(request, response) {
   }
 }
 
+async function isBuildReady() {
+  try {
+    const fileStats = await stat(resolve(distRoot, 'index.html'))
+    return fileStats.isFile()
+  } catch {
+    return false
+  }
+}
+
 const server = http.createServer(async (request, response) => {
-  if (request.url === '/healthz' && request.method === 'GET') {
-    sendJson(response, 200, { status: 'ok' })
+  let requestPath
+  try {
+    requestPath = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
+  } catch {
+    sendJson(response, 400, { error: { code: 'INVALID_URL', message: 'The requested URL is invalid.' } })
     return
   }
 
-  if (request.url === '/api/answer') {
+  if (requestPath === '/healthz' && request.method === 'GET') {
+    const buildReady = await isBuildReady()
+    sendJson(response, buildReady ? 200 : 503, {
+      status: buildReady ? 'ok' : 'degraded',
+      checks: { build: buildReady ? 'ok' : 'missing' },
+    })
+    return
+  }
+
+  if (requestPath === '/api/answer') {
     await handleAnswerRequest(request, response)
     return
   }
@@ -80,6 +102,7 @@ const server = http.createServer(async (request, response) => {
   await serveStatic(request, response)
 })
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`PolicyLens API listening on http://127.0.0.1:${port}`)
+server.listen(port, host, () => {
+  console.log(`PolicyLens API listening on http://${host}:${port}`)
 })
+

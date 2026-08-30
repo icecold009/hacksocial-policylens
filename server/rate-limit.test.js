@@ -23,3 +23,15 @@ test('keeps separate limits for separate clients', () => {
   assert.equal(limiter.check('one').allowed, false)
   assert.equal(limiter.check('two').allowed, true)
 })
+
+test('removes expired clients before admitting a new bounded key', () => {
+  let now = 1000
+  const limiter = createRateLimiter({ limit: 1, windowMs: 1000, maxKeys: 2, now: () => now })
+
+  assert.equal(limiter.check('one').allowed, true)
+  assert.equal(limiter.check('two').allowed, true)
+  now = 2000
+  assert.equal(limiter.check('three').allowed, true)
+  assert.equal(limiter.check('one').allowed, true)
+})
+
