@@ -24,8 +24,8 @@ PolicyLens is already submitted to HackSocial 2026. Keep this branch separate fr
 - [x] Record the live URL, deployment date, and exact commit; do not claim hosted latency because it was not benchmarked.
 - [x] Capture the source-selection, found-answer, “Why this answer?”, and not-found screenshots.
 - [ ] Record and publish the 90–120 second demo video without secrets or private data.
-- [ ] Update the existing Devpost entry with the live demo, repository, video, screenshots, and final description.
-- [ ] Re-submit the existing Devpost project and confirm the submitted state.
+- [x] Update the existing Devpost entry with the live demo, repository, and final description; video and screenshot uploads remain open until those media assets are published.
+- [x] Re-submit the existing Devpost project and confirm the submitted state.
 
 ## Explicitly deferred
 
@@ -40,4 +40,3 @@ PolicyLens is already submitted to HackSocial 2026. Keep this branch separate fr
 - External policy URLs are not fetched.
 - The deterministic fallback is the reproducible source of truth when no provider is configured.
 - PolicyLens is an explainer; important decisions should be confirmed with the relevant school or support team.
-
