@@ -62,8 +62,6 @@ function keepValidResponse(response, policy) {
 function App() {
   const [selectedId, setSelectedId] = useState(samplePolicies[0].id)
   const [question, setQuestion] = useState(initialQuery)
-  const [publicUrl, setPublicUrl] = useState('')
-  const [customSource, setCustomSource] = useState(null)
   const [comparisonId, setComparisonId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [hasAsked, setHasAsked] = useState(false)
@@ -89,7 +87,7 @@ function App() {
     () => samplePolicies.find((policy) => policy.id === selectedId) ?? samplePolicies[0],
     [selectedId],
   )
-  const activePolicy = customSource ?? selectedPolicy
+  const activePolicy = selectedPolicy
   const comparisonPolicy = useMemo(
     () => samplePolicies.find((policy) => policy.id === comparisonId && policy.id !== selectedId) ?? null,
     [comparisonId, selectedId],
@@ -98,52 +96,12 @@ function App() {
   function handlePolicyChange(event) {
     cancelPendingRequest()
     setSelectedId(event.target.value)
-    setCustomSource(null)
     setComparisonId('')
     setHasAsked(false)
     setCopyState('idle')
     setComparisonResult(null)
     const nextPolicy = samplePolicies.find((policy) => policy.id === event.target.value) ?? samplePolicies[0]
     setResult(createDefaultResponse(nextPolicy))
-  }
-
-  function handleUsePublicUrl(event) {
-    event.preventDefault()
-    const trimmedUrl = publicUrl.trim()
-    if (!trimmedUrl) return
-
-    cancelPendingRequest()
-    setCustomSource({
-      id: 'public-policy-url',
-      title: 'Public policy link',
-      label: 'External source · fetch not enabled in this local demo',
-      organization: 'External source',
-      sourceType: 'external',
-      source: trimmedUrl,
-      sourceUrl: trimmedUrl,
-      summary: 'The URL is shown as the selected source, but the starter does not transmit or fetch it yet.',
-      sourceRightsNote: 'External fetching is disabled in this local demo.',
-      sections: [],
-    })
-    setComparisonId('')
-    setHasAsked(true)
-    setCopyState('idle')
-    setComparisonResult(null)
-    setResult(createAnswerResponse({
-      policy: { id: 'public-policy-url', sourceUrl: trimmedUrl },
-      retrieval: { status: 'not_found', reason: 'This local starter does not fetch external documents yet.' },
-    }))
-  }
-
-  function handleResetSource() {
-    cancelPendingRequest()
-    setCustomSource(null)
-    setPublicUrl('')
-    setComparisonId('')
-    setHasAsked(false)
-    setCopyState('idle')
-    setComparisonResult(null)
-    setResult(createDefaultResponse(selectedPolicy))
   }
 
   function handleExampleQuestion(exampleQuestion) {
@@ -160,14 +118,6 @@ function App() {
     setHasAsked(true)
     setCopyState('idle')
     setComparisonResult(null)
-
-    if (activePolicy.sourceType === 'external') {
-      setResult(createAnswerResponse({
-        policy: activePolicy,
-        retrieval: { status: 'not_found', reason: 'This local starter does not fetch external documents yet.' },
-      }))
-      return
-    }
 
     setIsLoading(true)
     const requestId = requestSequence.current + 1
@@ -235,19 +185,19 @@ function App() {
           <span className="wordmark-mark">P</span>
           <span>PolicyLens</span>
         </a>
-        <span className="privacy-chip"><span className="chip-dot" /> Local demo · no API keys</span>
+        <span className="privacy-chip"><span className="chip-dot" /> Deterministic demo · no API keys</span>
       </header>
 
       <section className="hero" id="top">
         <div className="eyebrow"><span className="eyebrow-line" /> HACKSOCIAL · AI / ML TRACK</div>
         <h1>Make school policies<br /><em>make sense.</em></h1>
-        <p className="hero-copy">Ask a question about a public or sample policy. PolicyLens returns a plain-English answer, points to the passage it used, and says when the document does not contain the answer.</p>
+        <p className="hero-copy">Ask a question about a selected sample policy. PolicyLens returns a plain-English answer, points to the passage it used, and says when the document does not contain the answer.</p>
       </section>
 
       <section className="workspace" id="workspace" aria-label="Policy question workspace">
         <aside className="source-panel panel">
           <div className="panel-label"><span>01</span> CHOOSE A SOURCE</div>
-          <label className="field-label" htmlFor="policy-select">Sample policy document</label>
+          <label className="field-label" htmlFor="policy-select">Sample policy source</label>
           <select id="policy-select" value={selectedId} onChange={handlePolicyChange} disabled={isLoading}>
             {samplePolicies.map((policy) => <option key={policy.id} value={policy.id}>{policy.title}</option>)}
           </select>
@@ -259,7 +209,6 @@ function App() {
               <code>{activePolicy.source}</code>
             </div>
           </div>
-          {customSource && <button className="source-reset" type="button" onClick={handleResetSource} disabled={isLoading}>Back to sample policies <span aria-hidden="true">↩</span></button>}
           <div className="source-details" aria-label="Source metadata">
             <span>{activePolicy.organization}</span>
             <span>{activePolicy.sourceType === 'synthetic' ? 'Synthetic source' : 'External URL'}</span>
@@ -268,12 +217,10 @@ function App() {
           <p className="source-summary">{activePolicy.summary}</p>
           <p className="source-rights">{activePolicy.sourceRightsNote}</p>
           <div className="divider" />
-          <form className="url-form" onSubmit={handleUsePublicUrl}>
-            <label className="field-label" htmlFor="public-url">Or provide a public policy URL</label>
-            <input id="public-url" type="url" value={publicUrl} onChange={(event) => setPublicUrl(event.target.value)} placeholder="https://school.example/policy.pdf" disabled={isLoading} />
-            <button className="secondary-button" type="submit" disabled={isLoading}>Use public URL <span aria-hidden="true">↗</span></button>
-          </form>
-          <p className="privacy-note"><span aria-hidden="true">↳</span> This MVP keeps the demo local. External documents are not fetched yet.</p>
+          <div className="boundary-note" role="note">
+            <span className="boundary-note-label">DEMO BOUNDARY</span>
+            <p>External policy import is not enabled in this demo. Use the curated synthetic sources above; arbitrary URLs are not fetched.</p>
+          </div>
         </aside>
 
         <div className="query-column">
@@ -293,7 +240,7 @@ function App() {
             </div>}
           </form>
 
-          {!customSource && <div className="compare-control">
+          <div className="compare-control">
             <button className="compare-toggle" type="button" onClick={() => { setComparisonId(comparisonId ? '' : samplePolicies.find((policy) => policy.id !== selectedId)?.id ?? '') }} aria-expanded={Boolean(comparisonId)} aria-controls="compare-panel" disabled={isLoading}>
               {comparisonId ? 'Hide policy comparison' : 'Compare with another sample policy'} <span aria-hidden="true">{comparisonId ? '−' : '+'}</span>
             </button>
@@ -304,7 +251,7 @@ function App() {
               </select>
               <p>Ask once to see how both documents address the same question.</p>
             </div>}
-          </div>}
+          </div>
 
           <section className="pipeline-strip" aria-label="How PolicyLens answers">
             <span className="pipeline-label">TRUST LOOP</span>
@@ -382,7 +329,7 @@ function App() {
               <div className="not-found-content">
                 <div className="not-found-icon" aria-hidden="true">?</div>
                 <h2>{result.status === 'error' ? getErrorCopy(result.errorCode).title : 'I couldn’t find that in this document.'}</h2>
-                <p>{result.nextStep} {result.status === 'error' ? getErrorCopy(result.errorCode).recovery : 'Try a different question, choose another sample, or provide a public URL to wire into the next MVP slice.'}</p>
+                <p>{result.nextStep} {result.status === 'error' ? getErrorCopy(result.errorCode).recovery : 'Try a different question or choose another sample.'}</p>
                 <div className="not-found-contract"><span>NOT-FOUND CONTRACT</span> No unsupported answer is presented as fact.</div>
               </div>
             )}

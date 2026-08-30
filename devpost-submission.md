@@ -31,7 +31,7 @@ No specific hosted model or provider is claimed in this draft because none is co
 
 ## How We Used Codex
 
-Codex helped inspect the existing React/Vite MVP, turn the product promise into a tested retrieval and answer contract, add reproducible policy ingestion and evaluation cases, build the local server-side answer boundary, add provider-safe fallback handling, harden production static serving, and iterate on the trust-focused UI. Codex also ran the local verification loop and kept the work in logical commits on the feature branch `codex/hacksocial-mvp`.
+Codex helped inspect the existing React/Vite MVP, turn the product promise into a tested retrieval and answer contract, add reproducible policy ingestion and evaluation cases, build the local server-side answer boundary, add provider-safe fallback handling, harden production static serving, and iterate on the trust-focused UI. The release work is kept on the feature branch `codex/policylens-prize-max`.
 
 ## What We Learned
 
@@ -81,19 +81,21 @@ npm start
 
 Then open the local address printed by the server. Try an attendance question such as “What should I do if I will be absent?”, use the optional comparison control to compare the same question with “Personal devices,” and try an unsupported question such as “What is the school lunch menu?”. Inspect the status, exact evidence, source section, comparison status, and “Why this answer?” panel.
 
-Measured local verification currently passes data validation, the production build, 42 automated tests, and all 25 evaluation cases. The evaluation reports hit@3 of 15/15, found-answer citation support of 15/15, malformed-response rejection of 3/3, and complete coverage for the recorded direct, paraphrased, unsupported, and adversarial case groups.
+Measured local verification passes data validation, the production build, 53 automated tests, and all 25 evaluation cases. The evaluation reports hit@3 of 15/15, found-answer citation support of 15/15, malformed-response rejection of 3/3, and complete coverage for the recorded direct, paraphrased, unsupported, and adversarial case groups.
 
 ## Public Demo Link
 
-`[PLACEHOLDER]` No public demo has been deployed or authorized for publication. Local fallback: run `npm run build && npm start`.
+Render deployment is pending live verification. Until the hosted `/healthz` and browser flow pass, run the production-style local demo with `npm run build && npm start`.
 
 ## Public Repository Link
 
-`[PLACEHOLDER]` The feature branch is local and ahead of its remote tracking branch. Add the public repository URL only after publication is explicitly authorized.
+Repository: https://github.com/icecold009/hacksocial-policylens
+
+The implementation for this release is on the `codex/policylens-prize-max` branch.
 
 ## Demo Video
 
-`[PLACEHOLDER]` No video has been recorded yet. Use [`docs/demo-script.md`](docs/demo-script.md) for the 90–120 second recording outline.
+The 90–120 second recording is pending. Use [`docs/demo-script.md`](docs/demo-script.md) and show the verified hosted flow when available.
 
 ## Screenshot Shot List
 
@@ -109,26 +111,25 @@ Do not include terminal secrets, provider credentials, private browser tabs, or 
 
 ## Submission Readiness Notes
 
-### ⏳ Not submitted yet
-Nothing has been sent to Devpost.
+### Submitted entry
 
-This file is a local draft only. The official Devpost workflow state is not initialized in this checkout. Before using `$submit-project`, confirm the event registration and rules, fill the public repository/demo/video/screenshot fields, and re-run the final readiness checks.
+PolicyLens is already submitted to HackSocial 2026 at https://devpost.com/software/policylens-xopvfe. Update this existing project after the release evidence is verified; do not create a second entry.
 
 ## Known Limitations
 
 - The included policy sources are synthetic demo fixtures, not official school policies.
-- Public URL ingestion is intentionally not implemented; the URL field is an honest placeholder for a future safe-fetching slice.
+- External URL ingestion is intentionally not implemented; arbitrary documents are not fetched by the demo.
 - Semantic embeddings and reranking are not implemented; retrieval is deterministic lexical matching.
-- No hosted deployment, live provider configuration, peer usability study, or recorded video has been completed.
-- Hosted/incognito, keyboard-only, and peer usability checks remain open even though the local production-style browser flow passed on desktop and 320×800 mobile.
+- No live provider configuration or peer usability study is claimed.
+- Hosted/incognito, keyboard-only, and peer usability checks remain release gates until they are actually run.
 - PolicyLens is an explainer, not official school, legal, or medical guidance. Important decisions should be confirmed with the relevant school or support team.
 
-## TODO Official Form Fields
+## Release fields
 
-- Hackathon/event: `[FILL FROM OFFICIAL DEVPOST STATE]`
-- Public project URL: `[FILL AFTER AUTHORIZED PUBLICATION]`
-- Public demo URL: `[FILL AFTER AUTHORIZED DEPLOYMENT]`
-- Demo video URL: `[FILL AFTER RECORDING]`
-- Screenshots: `[ATTACH 3–5 VERIFIED CAPTURES]`
-- Team members and eligibility: `[CONFIRM IN OFFICIAL FORM]`
-- Codex session ID, if requested by the official form: `[FILL FROM CURRENT CODEX TASK]`
+- Hackathon/event: HackSocial 2026
+- Public project: https://devpost.com/software/policylens-xopvfe
+- Public repository: https://github.com/icecold009/hacksocial-policylens
+- Public demo: pending Render verification
+- Demo video: pending recording
+- Screenshots: pending verified captures
+

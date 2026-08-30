@@ -12,6 +12,7 @@
   --green: #195d42;
   --lime: #a7ed58;
   --coral: #e97d60;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +31,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .app-shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
 
-.skip-link { position: fixed; top: 12px; left: 12px; z-index: 10; padding: 10px 13px; color: #153321; background: var(--lime); border-radius: 8px; font-size: 12px; font-weight: 800; text-decoration: none; transform: translateY(-160%); transition: transform 160ms ease; }
+.skip-link { position: fixed; top: 12px; left: 12px; z-index: 10; padding: 10px 13px; color: #153321; background: var(--lime); border-radius: 8px; font-size: 12px; font-weight: 800; text-decoration: none; transform: translateY(-160%); transition: transform 160ms var(--ease-out); }
 .skip-link:focus { transform: translateY(0); }
 
 .topbar { display: flex; justify-content: space-between; align-items: center; padding: 28px 0 18px; }
@@ -70,22 +71,20 @@ textarea::placeholder, input::placeholder { color: #a8b3ab; }
 .source-summary { margin: 15px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .source-rights { margin: 8px 0 0; color: #5d7064; font-size: 10px; line-height: 1.45; }
 .divider { height: 1px; margin: 24px 0 21px; background: var(--line); }
-.secondary-button, .ask-button { border: 0; font-weight: 800; transition: transform 160ms ease, background 160ms ease; }
-.secondary-button:disabled, .ask-button:disabled { cursor: wait; opacity: 0.65; transform: none; }
-.secondary-button:hover, .ask-button:hover { transform: translateY(-1px); }
-.secondary-button { width: 100%; margin-top: 10px; padding: 11px 13px; color: var(--green); background: #eef4ed; border-radius: 9px; font-size: 12px; text-align: left; }
-.secondary-button span { float: right; font-size: 16px; line-height: 12px; }
-.source-reset { width: 100%; margin-top: 10px; padding: 8px 0; color: var(--green); background: transparent; border: 0; font-size: 10px; font-weight: 800; text-align: left; }
-.source-reset span { float: right; font-size: 15px; line-height: 10px; }
+.ask-button { border: 0; font-weight: 800; transition: transform 140ms var(--ease-out), background 140ms ease; }
+.ask-button:disabled { cursor: wait; opacity: 0.65; transform: none; }
+.ask-button:active:not(:disabled) { transform: scale(0.97); }
 .compare-control { margin-top: 19px; }
-.compare-toggle { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--green); background: transparent; border: 1px solid var(--line); border-radius: 9px; font-size: 11px; font-weight: 800; text-align: left; }
+.compare-toggle { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--green); background: transparent; border: 1px solid var(--line); border-radius: 9px; font-size: 11px; font-weight: 800; text-align: left; transition: transform 140ms var(--ease-out), background 140ms ease; }
+.compare-toggle:active:not(:disabled) { transform: scale(0.99); }
 .compare-toggle span { float: right; font-size: 17px; line-height: 12px; }
 .compare-panel { margin-top: 9px; padding: 13px; background: #f8fbf7; border: 1px solid #e2ebe2; border-radius: 9px; }
 .compare-panel .field-label { margin-bottom: 6px; font-size: 11px; }
 .compare-panel select { padding: 9px 10px; font-size: 11px; }
 .compare-panel p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
-.privacy-note { margin: 17px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.privacy-note span { color: var(--green); font-size: 15px; vertical-align: -1px; }
+.boundary-note { margin-top: 21px; padding: 13px; color: var(--muted); background: #f8fbf7; border: 1px solid #e2ebe2; border-radius: 10px; font-size: 10px; line-height: 1.5; }
+.boundary-note-label { display: block; margin-bottom: 5px; color: var(--green); font-size: 9px; font-weight: 900; letter-spacing: 0.12em; }
+.boundary-note p { margin: 0; }
 
 .query-column > .panel-label { padding-left: 2px; }
 .question-form { overflow: hidden; margin-bottom: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 12px 30px rgba(27, 57, 39, 0.04); }
@@ -97,8 +96,8 @@ textarea::placeholder, input::placeholder { color: #a8b3ab; }
 .example-questions { padding: 12px 17px 15px; border-top: 1px solid #edf1ed; }
 .example-questions > span { color: #5d7064; font-size: 9px; font-weight: 850; letter-spacing: 0.11em; }
 .example-questions > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
-.example-questions button { min-height: 44px; padding: 8px 10px; color: var(--green); background: #f2f7f1; border: 1px solid #e1ebe0; border-radius: 999px; font-size: 10px; text-align: left; }
-.example-questions button:hover { background: #e7f2e5; }
+.example-questions button { min-height: 44px; padding: 8px 10px; color: var(--green); background: #f2f7f1; border: 1px solid #e1ebe0; border-radius: 999px; font-size: 10px; text-align: left; transition: transform 140ms var(--ease-out), background 140ms ease; }
+.example-questions button:active:not(:disabled) { transform: scale(0.98); }
 .pipeline-strip { margin-bottom: 18px; padding: 14px 17px; background: #eef4ed; border: 1px solid #dce9dc; border-radius: 12px; }
 .pipeline-label { color: var(--green); font-size: 9px; font-weight: 850; letter-spacing: 0.12em; }
 .pipeline-strip ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 11px 0 0; padding: 0; list-style: none; counter-reset: pipeline; }
@@ -136,8 +135,8 @@ blockquote { margin: 16px 0 19px; color: #4d5e54; font-family: Georgia, serif; f
 .evidence-meta { display: flex; justify-content: space-between; gap: 15px; color: #5d7064; font-size: 10px; }
 .evidence-meta span:last-child { color: var(--green); font-weight: 700; text-align: right; }
 .evidence-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-.copy-button { min-height: 36px; padding: 7px 10px; color: var(--green); background: #eef4ed; border: 1px solid #dce9dc; border-radius: 8px; font-size: 10px; font-weight: 800; }
-.copy-button:hover { background: #e3f0e1; }
+.copy-button { min-height: 36px; padding: 7px 10px; color: var(--green); background: #eef4ed; border: 1px solid #dce9dc; border-radius: 8px; font-size: 10px; font-weight: 800; transition: transform 140ms var(--ease-out), background 140ms ease; }
+.copy-button:active:not(:disabled) { transform: scale(0.97); }
 .copy-button span { margin-left: 8px; font-size: 13px; }
 .copy-status { color: #a6533d; font-size: 10px; }
 .next-step { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
@@ -145,8 +144,8 @@ blockquote { margin: 16px 0 19px; color: #4d5e54; font-family: Georgia, serif; f
 .follow-up-questions { margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf1ed; }
 .follow-up-questions > span { color: #5d7064; font-size: 9px; font-weight: 850; letter-spacing: 0.11em; }
 .follow-up-questions > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
-.follow-up-questions button { min-height: 44px; padding: 8px 10px; color: var(--green); background: #f2f7f1; border: 1px solid #e1ebe0; border-radius: 9px; font-size: 10px; text-align: left; }
-.follow-up-questions button:hover { background: #e7f2e5; }
+.follow-up-questions button { min-height: 44px; padding: 8px 10px; color: var(--green); background: #f2f7f1; border: 1px solid #e1ebe0; border-radius: 9px; font-size: 10px; text-align: left; transition: transform 140ms var(--ease-out), background 140ms ease; }
+.follow-up-questions button:active:not(:disabled) { transform: scale(0.98); }
 .follow-up-questions button span { margin-left: 8px; font-size: 13px; }
 .why-answer { margin-top: 17px; color: var(--muted); border-top: 1px solid #edf1ed; }
 .why-answer summary { width: fit-content; padding-top: 14px; color: var(--green); cursor: pointer; font-size: 11px; font-weight: 800; }
@@ -203,4 +202,11 @@ blockquote { margin: 16px 0 19px; color: #4d5e54; font-family: Georgia, serif; f
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .ask-button:hover:not(:disabled) { transform: translateY(-1px); }
+  .compare-toggle:hover:not(:disabled), .copy-button:hover:not(:disabled) { background: #e7f2e5; }
+  .example-questions button:hover:not(:disabled), .follow-up-questions button:hover:not(:disabled) { background: #e7f2e5; }
+}
+
 

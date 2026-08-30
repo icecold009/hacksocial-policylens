@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/index.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "test": "node --test",
     "ingest": "node scripts/ingest-policies.mjs",
     "validate:data": "node scripts/ingest-policies.mjs --check",

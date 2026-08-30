@@ -2,7 +2,7 @@
 
 Target length: 90–120 seconds.
 
-This script is written for a local production-style demo until a public URL is available. Replace bracketed instructions with the verified hosted URL and final captures when those exist.
+Use the verified Render URL for the final recording. If deployment is still pending, use the production-style local server and do not describe it as a hosted demo.
 
 ## 0:00–0:15 — Problem and promise
 
@@ -46,8 +46,9 @@ End on the answer panel and the one-line impact statement. Do not show API keys,
 
 ## Recording checklist
 
-- [ ] Use the production-style local server or a verified hosted URL.
+- [ ] Use the verified Render URL, or the production-style local server while deployment is pending.
 - [ ] Hide terminals, secrets, personal browser tabs, and private records.
 - [ ] Capture the source-selection, found, evidence-explanation, and not-found states.
 - [ ] Keep the final recording between 90 and 120 seconds.
 - [ ] Verify every URL in the final frame before publishing.
+
