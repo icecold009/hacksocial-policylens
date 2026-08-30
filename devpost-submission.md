@@ -85,7 +85,7 @@ Measured local verification passes data validation, the production build, 53 aut
 
 ## Public Demo Link
 
-Render deployment is pending live verification. Until the hosted `/healthz` and browser flow pass, run the production-style local demo with `npm run build && npm start`.
+[PolicyLens live demo](https://hacksocial-policylens.onrender.com) is deployed on Render and was verified against commit `71ace683e292a5f8edd00635e52e8e5c793429ea` on August 30, 2026. The free service may cold-start after inactivity; no hosted latency benchmark is claimed.
 
 ## Public Repository Link
 
@@ -95,11 +95,11 @@ The implementation for this release is on the `codex/policylens-prize-max` branc
 
 ## Demo Video
 
-The 90–120 second recording is pending. Use [`docs/demo-script.md`](docs/demo-script.md) and show the verified hosted flow when available.
+Record a 90–120 second walkthrough using [`docs/demo-script.md`](docs/demo-script.md). The final video URL is not included until the recording is actually published.
 
 ## Screenshot Shot List
 
-Capture these after the UI has been opened in a supported browser and the local or hosted URL is known:
+The four required QA captures were taken from the verified hosted app on August 30, 2026. Upload them to the existing Devpost entry when the final media package is ready:
 
 1. Landing state showing the PolicyLens purpose and the three source choices.
 2. Attendance question with the plain-English answer and exact “Reporting an absence” evidence.
@@ -121,7 +121,8 @@ PolicyLens is already submitted to HackSocial 2026 at https://devpost.com/softwa
 - External URL ingestion is intentionally not implemented; arbitrary documents are not fetched by the demo.
 - Semantic embeddings and reranking are not implemented; retrieval is deterministic lexical matching.
 - No live provider configuration or peer usability study is claimed.
-- Hosted/incognito, keyboard-only, and peer usability checks remain release gates until they are actually run.
+- Hosted desktop/fresh-tab flows are verified; incognito/private-browser, complete keyboard-only, and peer usability checks are not claimed yet.
+- The free Render service may cold-start after inactivity; hosted latency has not been benchmarked.
 - PolicyLens is an explainer, not official school, legal, or medical guidance. Important decisions should be confirmed with the relevant school or support team.
 
 ## Release fields
@@ -129,7 +130,8 @@ PolicyLens is already submitted to HackSocial 2026 at https://devpost.com/softwa
 - Hackathon/event: HackSocial 2026
 - Public project: https://devpost.com/software/policylens-xopvfe
 - Public repository: https://github.com/icecold009/hacksocial-policylens
-- Public demo: pending Render verification
-- Demo video: pending recording
-- Screenshots: pending verified captures
+- Public demo: https://hacksocial-policylens.onrender.com
+- Deployed commit: 71ace683e292a5f8edd00635e52e8e5c793429ea
+- Demo video: not published yet
+- Screenshots: four hosted QA captures completed; Devpost upload remains
 

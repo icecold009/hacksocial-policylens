@@ -15,14 +15,14 @@ PolicyLens is already submitted to HackSocial 2026. Keep this branch separate fr
 
 ## Before publishing the release
 
-- [ ] Run `npm ci`, `npm run verify`, `npm run smoke`, and `npm audit --omit=optional --audit-level=moderate` from the final checkout.
-- [ ] Push the feature branch through the connected GitHub integration.
-- [ ] Deploy the exact verified commit to Render with `npm ci && npm run build`, `npm start`, and `/healthz` as the health check.
-- [ ] Run `npm run smoke -- --base-url <verified-render-url>`.
-- [ ] Test the live app in a fresh/incognito browser with supported, paraphrased, and unsupported questions.
-- [ ] Verify desktop, 320px mobile layout, visible keyboard focus, copy evidence, comparison, loading, and no console errors.
-- [ ] Record the live URL, deployment date, exact commit, and measured hosted latency only if measured.
-- [ ] Capture the source-selection, found-answer, “Why this answer?”, and not-found screenshots.
+- [x] Run `npm ci`, `npm run verify`, `npm run smoke`, and `npm audit --omit=optional --audit-level=moderate` from the final checkout.
+- [x] Publish the feature branch through the connected GitHub integration.
+- [x] Deploy commit `71ace683e292a5f8edd00635e52e8e5c793429ea` to Render with `npm ci && npm run build`, `npm start`, and `/healthz` as the health check.
+- [x] Run `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com`.
+- [x] Test the live app in a fresh hosted browser with supported, comparison, and unsupported questions.
+- [x] Verify desktop rendering, local 320px mobile layout, visible focus, copy evidence, comparison, loading, and no console errors. Incognito/private-browser and complete keyboard-only verification remain open.
+- [x] Record the live URL, deployment date, and exact commit; do not claim hosted latency because it was not benchmarked.
+- [x] Capture the source-selection, found-answer, “Why this answer?”, and not-found screenshots.
 - [ ] Record and publish the 90–120 second demo video without secrets or private data.
 - [ ] Update the existing Devpost entry with the live demo, repository, video, screenshots, and final description.
 - [ ] Re-submit the existing Devpost project and confirm the submitted state.

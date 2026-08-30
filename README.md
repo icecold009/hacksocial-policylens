@@ -41,7 +41,13 @@ npm run smoke
 For a deployed or already-running server, point the same smoke checks at its origin:
 
 ```bash
-npm run smoke -- --base-url https://your-render-service.onrender.com
+npm run smoke -- --base-url https://hacksocial-policylens.onrender.com
+```
+
+The verified Render origin for this release is:
+
+```text
+https://hacksocial-policylens.onrender.com
 ```
 
 The app is intentionally small and dependency-light for an older laptop. The current local demo uses the React UI plus a local server-side answer boundary and does not require credentials, a database, or an AI provider.
@@ -97,7 +103,8 @@ The answer contract is:
 
 - Release branch: `codex/policylens-prize-max`
 - Verification: `npm run verify`, `npm run smoke`, and the dependency audit are the required release gates.
-- Deployment: Render deployment is pending live verification; no hosted URL is claimed until `/healthz` and the browser flow pass.
+- Deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), verified against commit `71ace683e292a5f8edd00635e52e8e5c793429ea` on August 30, 2026.
+- Hosted verification: `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed, and the hosted desktop flow covered a grounded answer, comparison, and unsupported-question abstention with no console warnings or errors. The free Render service may cold-start after inactivity.
 - Submission: the existing HackSocial 2026 PolicyLens entry remains the single Devpost project to update.
 
 ## Privacy boundaries
@@ -118,8 +125,9 @@ The answer contract is:
 - [x] Run `npm run build` before submission.
 - [x] Keep secrets, private data, and deployment credentials out of Git history.
 - [x] Add a deterministic production smoke command and a GitHub Actions verification workflow.
-- [ ] Add the verified live demo URL, screenshots, and demo video to the existing Devpost entry.
+- [x] Deploy and smoke-test the exact release commit on Render.
+- [ ] Add the demo video and captured screenshots to the existing Devpost entry.
 
-The Devpost write-up and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They distinguish verified local evidence from pending hosted and media evidence.
+The Devpost write-up and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They distinguish verified hosted evidence from the still-unpublished media assets.
 
 
