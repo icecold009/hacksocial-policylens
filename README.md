@@ -101,7 +101,9 @@ The answer contract is:
 
 ## Release status
 
-- Release branch: `codex/policylens-prize-max`
+- Canonical branch: `main`
+- Main release checkpoint: `876cdcd621ee25e4eb23650313df30e04c2b02e3`
+- The prize-max slice contains five release commits after the reviewed hardening base and was promoted into `main` as one squashed release checkpoint.
 - Verification: `npm run verify`, `npm run smoke`, and the dependency audit are the required release gates.
 - Deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), verified against commit `71ace683e292a5f8edd00635e52e8e5c793429ea` on August 30, 2026.
 - Hosted verification: `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed, and the hosted desktop flow covered a grounded answer, comparison, and unsupported-question abstention with no console warnings or errors. The free Render service may cold-start after inactivity.

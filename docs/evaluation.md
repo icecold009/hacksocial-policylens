@@ -39,6 +39,8 @@ This is local browser evidence, not proof of hosted, incognito, keyboard-only, o
 
 Measured on August 30, 2026 against the Render origin `https://hacksocial-policylens.onrender.com`, deployed from commit `71ace683e292a5f8edd00635e52e8e5c793429ea`:
 
+The verified release was promoted to `main` as checkpoint `876cdcd621ee25e4eb23650313df30e04c2b02e3`. GitHub Actions verification run #9 passed on that exact `main` commit; the deployed application tree remains the same verified deterministic release tree.
+
 - `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed for `/healthz`, `/`, a grounded answer with evidence, and an unsupported-question abstention.
 - A hosted desktop/fresh-tab browser pass completed the grounded attendance answer, comparison control, and unsupported-question flow.
 - The browser console reported no warnings or errors during those flows.

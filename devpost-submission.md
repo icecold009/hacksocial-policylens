@@ -27,11 +27,11 @@ Students and families should not need specialist policy knowledge to understand 
 - Provider output is validated against a stable answer contract. Uncited, malformed, or unsupported output is rejected; bounded retries are limited to safe transient failures.
 - No provider credentials are committed or sent to the browser. The current default demo uses deterministic local fallback answers so it remains reproducible without an API key.
 
-No specific hosted model or provider is claimed in this draft because none is configured in the repository.
+No specific hosted model or provider is claimed in this submission because none is configured in the repository.
 
 ## How We Used Codex
 
-Codex helped inspect the existing React/Vite MVP, turn the product promise into a tested retrieval and answer contract, add reproducible policy ingestion and evaluation cases, build the local server-side answer boundary, add provider-safe fallback handling, harden production static serving, and iterate on the trust-focused UI. The release work is kept on the feature branch `codex/policylens-prize-max`.
+Codex helped inspect the existing React/Vite MVP, turn the product promise into a tested retrieval and answer contract, add reproducible policy ingestion and evaluation cases, build the local server-side answer boundary, add provider-safe fallback handling, harden production static serving, and iterate on the trust-focused UI. The prize-max slice contains five release commits after the reviewed hardening base and was promoted into the canonical `main` branch as one squashed release checkpoint.
 
 ## What We Learned
 
@@ -91,7 +91,7 @@ Measured local verification passes data validation, the production build, 53 aut
 
 Repository: https://github.com/icecold009/hacksocial-policylens
 
-The implementation for this release is on the `codex/policylens-prize-max` branch.
+The canonical implementation for this release is on the `main` branch.
 
 ## Demo Video
 
