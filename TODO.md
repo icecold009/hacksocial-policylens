@@ -64,6 +64,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] Record the currently verified Render URL: https://hacksocial-policylens.onrender.com
 - [x] Record the currently verified deployed application commit: `b9a636d639509919c1d318a876e923bc6fb391f6`.
 - [x] Change the Render service auto-deploy branch to `main`; verified in the Render dashboard and service branch link on 2026-08-31 at 18:08 UTC.
+- [x] Set Render Auto-Deploy to `On Commit`; verified in the dashboard on 2026-08-31 at 18:35 UTC.
 - [x] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds. Render deploy `dep-daas7v3bc2fs738i45e0` reports `Deploy succeeded | Live` for source `b9a636d639509919c1d318a876e923bc6fb391f6`.
 - [x] Resolve the transient public availability failure: after the Render Singapore incident moved through recovery, `/healthz` returned HTTP 200 and the deployed service is live.
 - [x] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair. Hosted smoke passed; live browser supported, paraphrased, and unsupported flows produced the expected evidence/not-found states with no console logs.
