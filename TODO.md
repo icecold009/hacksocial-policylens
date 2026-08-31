@@ -22,9 +22,9 @@ PolicyLens is already submitted to HackSocial 2026. Keep this branch separate fr
 - [x] Test the live app in a fresh hosted browser with supported, comparison, and unsupported questions.
 - [x] Verify desktop rendering, local 320px mobile layout, visible focus, copy evidence, comparison, loading, and no console errors. Incognito/private-browser and complete keyboard-only verification remain open.
 - [x] Record the live URL, deployment date, and exact commit; do not claim hosted latency because it was not benchmarked.
-- [x] Capture the source-selection, found-answer, “Why this answer?”, and not-found screenshots.
+- [x] Capture the source-selection, found-answer, “Why this answer?”, and not-found screenshots; set the clean landing capture as the Devpost project thumbnail.
 - [ ] Record and publish the 90–120 second demo video without secrets or private data.
-- [x] Update the existing Devpost entry with the live demo, repository, and final description; video and screenshot uploads remain open until those media assets are published.
+- [x] Update the existing Devpost entry with the live demo, repository, final description, and project thumbnail; separate gallery screenshot upload remains manual because the connector does not expose it.
 - [x] Re-submit the existing Devpost project and confirm the submitted state.
 
 ## Explicitly deferred
