@@ -12,11 +12,12 @@ The direct dependencies declared in `package.json` and installed from `package-l
 | --- | --- | --- | --- |
 | React | 18.3.1 | MIT | UI runtime |
 | React DOM | 18.3.1 | MIT | Browser rendering |
-| Vite | 5.4.21 | MIT | Development server and production bundler |
-| `@vitejs/plugin-react` | 4.7.0 | MIT | React-aware Vite integration |
+| Vite | 8.2.2 | MIT | Development server and production bundler |
+| `@vitejs/plugin-react` | 6.1.1 | MIT | React-aware Vite integration |
 
-The installed dependency tree was checked locally on August 26, 2026: 63 package manifests reported a license field and none were missing one. Recheck dependency metadata before redistributing a future lockfile or adding new packages.
+The installed dependency tree and licenses were checked locally on August 28, 2026. Recheck dependency metadata before redistributing a future lockfile or adding new packages.
 
 ## External services
 
 The default demo does not call an external AI provider, database, analytics service, or document-hosting service. The optional provider adapter is disabled unless all three `POLICYLENS_AI_*` environment variables are configured server-side.
+

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
-import { API_ERROR_CODES, handleAnswerRequest } from './answer-service.mjs'
+import { API_ERROR_CODES, getClientKey, handleAnswerRequest } from './answer-service.mjs'
 
 function createRequest({ method = 'POST', body = '', contentType = 'application/json', origin, remoteAddress = 'route-test' } = {}) {
   const request = Readable.from([body])
@@ -79,3 +79,11 @@ test('handles CORS preflight without invoking the answer flow', async () => {
   assert.equal(result.headers['Access-Control-Allow-Methods'], 'POST, OPTIONS')
   assert.equal(result.headers['Access-Control-Allow-Origin'], 'http://localhost:5173')
 })
+
+test('uses forwarded client identity only when the proxy is explicitly trusted', () => {
+  const request = { headers: { 'x-forwarded-for': '203.0.113.10, 10.0.0.2' }, socket: { remoteAddress: '10.0.0.2' } }
+
+  assert.equal(getClientKey(request, {}), 'direct:10.0.0.2')
+  assert.equal(getClientKey(request, { POLICYLENS_TRUST_PROXY: 'true' }), 'proxy:203.0.113.10')
+})
+

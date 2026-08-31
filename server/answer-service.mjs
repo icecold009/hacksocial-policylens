@@ -22,6 +22,19 @@ const policies = new Map(samplePolicies.map((policy) => [policy.id, policy]))
 const LOCAL_UI_ORIGINS = new Set(['http://127.0.0.1:5173', 'http://localhost:5173'])
 const answerRateLimiter = createRateLimiter()
 
+export function getClientKey(request, environment = process.env) {
+  if (environment?.POLICYLENS_TRUST_PROXY === 'true') {
+    const forwarded = request.headers['x-forwarded-for']
+    const firstForwardedAddress = String(Array.isArray(forwarded) ? forwarded[0] : forwarded ?? '')
+      .split(',')[0]
+      .trim()
+    if (firstForwardedAddress) return `proxy:${firstForwardedAddress.slice(0, 128)}`
+  }
+
+  const remoteAddress = request.socket?.remoteAddress
+  return `direct:${typeof remoteAddress === 'string' && remoteAddress ? remoteAddress.slice(0, 128) : 'unknown'}`
+}
+
 function hasProviderConfig(environment) {
   return Boolean(environment?.POLICYLENS_AI_ENDPOINT && environment?.POLICYLENS_AI_API_KEY && environment?.POLICYLENS_AI_MODEL)
 }
@@ -138,8 +151,9 @@ function getCorsHeaders(request) {
     : {}
 }
 
-export async function handleAnswerRequest(request, response) {
+export async function handleAnswerRequest(request, response, options = {}) {
   const corsHeaders = getCorsHeaders(request)
+  const environment = options.environment ?? process.env
 
   if (request.method === 'OPTIONS') {
     sendJson(response, 204, null, {
@@ -156,7 +170,7 @@ export async function handleAnswerRequest(request, response) {
     return
   }
 
-  const rateLimit = answerRateLimiter.check(request.socket?.remoteAddress ?? 'unknown')
+  const rateLimit = answerRateLimiter.check(getClientKey(request, environment))
   if (!rateLimit.allowed) {
     const result = createErrorResult(API_ERROR_CODES.RATE_LIMITED, 'Too many requests. Try again shortly.', 429)
     sendJson(response, result.statusCode, result.body, { ...corsHeaders, 'Retry-After': String(rateLimit.retryAfterSeconds) })
@@ -178,7 +192,7 @@ export async function handleAnswerRequest(request, response) {
   }
 
   try {
-    const result = await answerQuestion(await readJsonBody(request))
+    const result = await answerQuestion(await readJsonBody(request), { environment })
     sendJson(response, result.statusCode, result.body, corsHeaders)
   } catch (error) {
     const errorCode = error?.code === API_ERROR_CODES.REQUEST_TOO_LARGE ? API_ERROR_CODES.REQUEST_TOO_LARGE : API_ERROR_CODES.INVALID_JSON
@@ -188,3 +202,4 @@ export async function handleAnswerRequest(request, response) {
     sendJson(response, result.statusCode, result.body, corsHeaders)
   }
 }
+

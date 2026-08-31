@@ -101,3 +101,32 @@ test('rejects malformed evidence without throwing', () => {
   assert.equal(validation.valid, false)
   assert.match(validation.errors.join(' '), /evidence must be an array/)
 })
+
+test('rejects evidence on not-found responses', () => {
+  const validation = validateAnswerResponse({
+    status: 'not_found',
+    answer: '',
+    evidence: [{ documentId: 'attendance', section: 'Reporting an absence', quote: 'Notify the school.', sourceUrl: null }],
+    evidenceStrength: 'weak',
+    nextStep: 'Try another question.',
+    disclaimer: 'Test disclaimer',
+  })
+
+  assert.equal(validation.valid, false)
+  assert.match(validation.errors.join(' '), /must not contain evidence/)
+})
+
+test('rejects oversized answer contract fields', () => {
+  const validation = validateAnswerResponse({
+    status: 'found',
+    answer: 'a'.repeat(2_001),
+    evidence: [{ documentId: 'attendance', section: 'Reporting an absence', quote: 'Notify the school.', sourceUrl: null }],
+    evidenceStrength: 'strong',
+    nextStep: '',
+    disclaimer: 'Test disclaimer',
+  })
+
+  assert.equal(validation.valid, false)
+  assert.match(validation.errors.join(' '), /answer must be a string/)
+})
+

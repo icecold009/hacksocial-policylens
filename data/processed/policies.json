@@ -17,6 +17,20 @@
         "section": "Reporting an absence",
         "page": null,
         "text": "A parent or guardian should notify the school before 9:00 a.m. on a day the student will be absent.",
+        "keywords": [
+          "absent",
+          "absence",
+          "attendance",
+          "miss",
+          "report",
+          "notify",
+          "parent",
+          "guardian",
+          "9:00"
+        ],
+        "answer": "For an absence, a parent or guardian should notify the school before 9:00 a.m. that morning.",
+        "nextStep": "If your school uses a different reporting channel, confirm it with the attendance office.",
+        "exampleQuestion": "What should I do if I will be absent?",
         "sourceUrl": null,
         "ordinal": 0
       },
@@ -26,6 +40,19 @@
         "section": "After returning",
         "page": null,
         "text": "Students should bring an absence note to the attendance office within three school days of returning.",
+        "keywords": [
+          "note",
+          "excused",
+          "documentation",
+          "return",
+          "three",
+          "days",
+          "bring",
+          "office"
+        ],
+        "answer": "After returning, bring an absence note to the attendance office within three school days.",
+        "nextStep": "Keep a copy of the note if your school asks for documentation.",
+        "exampleQuestion": "Where do I bring an absence note?",
         "sourceUrl": null,
         "ordinal": 1
       }
@@ -49,6 +76,19 @@
         "section": "During class",
         "page": null,
         "text": "Personal phones and smart devices should be silenced and kept in a student bag during lessons unless a teacher gives permission.",
+        "keywords": [
+          "phone",
+          "device",
+          "personal",
+          "class",
+          "lesson",
+          "silence",
+          "bag",
+          "permission"
+        ],
+        "answer": "During lessons, keep personal phones and smart devices silenced and in your bag unless your teacher gives permission.",
+        "nextStep": "Ask the teacher before using a personal device during a lesson.",
+        "exampleQuestion": "What should I do with my phone during class?",
         "sourceUrl": null,
         "ordinal": 0
       },
@@ -58,6 +98,19 @@
         "section": "Support exceptions",
         "page": null,
         "text": "A student may use a device for an approved medical or accessibility need after arranging a plan with the school.",
+        "keywords": [
+          "exception",
+          "medical",
+          "accessibility",
+          "support",
+          "permission",
+          "plan",
+          "approved",
+          "device"
+        ],
+        "answer": "Approved medical or accessibility needs can be supported through a plan arranged with the school.",
+        "nextStep": "Arrange the support plan with the school before relying on the exception.",
+        "exampleQuestion": "When can I use a device for accessibility?",
         "sourceUrl": null,
         "ordinal": 1
       }
@@ -81,6 +134,17 @@
         "section": "Requesting support",
         "page": null,
         "text": "Students and families can contact the school support team to discuss an accessibility plan for classroom participation.",
+        "keywords": [
+          "accessibility",
+          "accommodation",
+          "support",
+          "plan",
+          "student",
+          "family"
+        ],
+        "answer": "Students and families can contact the school support team to discuss an accessibility plan for classroom participation.",
+        "nextStep": "Contact the school support team to discuss the student’s specific needs.",
+        "exampleQuestion": "Who can discuss an accessibility plan with my family?",
         "sourceUrl": null,
         "ordinal": 0
       },
@@ -90,6 +154,17 @@
         "section": "Reviewing support",
         "page": null,
         "text": "The support team can review an accessibility plan when a student’s classroom needs change.",
+        "keywords": [
+          "review",
+          "update",
+          "change",
+          "plan",
+          "support",
+          "term"
+        ],
+        "answer": "The support team can review an accessibility plan when classroom needs change.",
+        "nextStep": "Ask the support team for a review when the student’s needs change.",
+        "exampleQuestion": "When can a support plan be reviewed?",
         "sourceUrl": null,
         "ordinal": 1
       }

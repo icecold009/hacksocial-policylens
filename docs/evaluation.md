@@ -33,8 +33,19 @@ Measured locally on August 26, 2026 against the production-style server at `http
 - Comparison interaction: the same attendance question produced the grounded attendance answer plus an explicit “Not found” result for the Personal devices comparison source; the comparison remained visible without mobile overflow.
 - Console health: no relevant warning or error logs were reported during the checked flows.
 
-This is local browser evidence, not proof of hosted, incognito, keyboard-only, or cross-browser behavior.
+This is local browser evidence, not proof of hosted, incognito, keyboard-only, or cross-browser behavior. The release smoke command now provides a repeatable HTTP check for either the local production-style server or a verified hosted origin; it does not replace rendered browser QA.
+
+## Hosted release verification
+
+Measured on August 30, 2026 against the Render origin `https://hacksocial-policylens.onrender.com`, deployed from commit `71ace683e292a5f8edd00635e52e8e5c793429ea`:
+
+- `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed for `/healthz`, `/`, a grounded answer with evidence, and an unsupported-question abstention.
+- A hosted desktop/fresh-tab browser pass completed the grounded attendance answer, comparison control, and unsupported-question flow.
+- The browser console reported no warnings or errors during those flows.
+- A 320px mobile viewport showed no horizontal overflow during the local browser pass; a hosted mobile pass, incognito/private-browser pass, complete keyboard-only pass, and peer usability study are not claimed.
+- Render free-tier cold-start latency was not benchmarked.
 
 ## Development-server note
 
-The production-style `npm start` path is verified. In this managed OneDrive sandbox, `npm run dev` starts Vite but then exits when esbuild tries to resolve React’s development CJS files, reporting `Cannot read directory "../../../..": Access is denied.` The files are present and the same source builds and serves successfully through `npm run build && npm start`; the dev-server item remains open until it is reproduced outside this sandbox or fixed with a confirmed Vite configuration change.
+After the Vite 8.2.2 upgrade, `npm run dev:ui -- --host 127.0.0.1 --port 5174` reached the Vite ready state locally. The production-style `npm start` path and `npm run smoke` are release checks. Hosted desktop/fresh-tab behavior is now verified separately from local browser evidence; incognito/private-browser and complete keyboard-only behavior remain unclaimed.
+
