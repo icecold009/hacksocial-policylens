@@ -49,7 +49,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] The comparison flow works in the hosted desktop browser pass.
 - [x] “Why this answer?” and evidence-copy controls are present.
 - [x] Loading, visible focus, reduced-motion, pointer-aware hover, and press-feedback styles are implemented.
-- [x] Confirm the live Render origin is healthy and hosted smoke passes. After the transient Render Singapore incident cleared, `/healthz` returned HTTP 200 with `{\"status\":\"ok\",\"checks\":{\"build\":\"ok\"}}` and hosted smoke passed on 2026-08-31.
+- [x] Confirm the live Render origin is healthy and hosted smoke passes. After the transient Render Singapore incident cleared, `/healthz` returned HTTP 200 with `{"status":"ok","checks":{"build":"ok"}}` and hosted smoke passed on 2026-08-31.
 - [x] Hosted desktop supported and unsupported flows complete with no console errors.
 - [ ] Complete a fresh incognito/private-browser test of the hosted supported, paraphrased, comparison, and unsupported flows.
 - [ ] Complete a keyboard-only walkthrough and record visible focus plus usable primary controls.
@@ -67,7 +67,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds. Render deploy `dep-daas7v3bc2fs738i45e0` reports `Deploy succeeded | Live` for source `b9a636d639509919c1d318a876e923bc6fb391f6`.
 - [x] Resolve the transient public availability failure: after the Render Singapore incident moved through recovery, `/healthz` returned HTTP 200 and the deployed service is live.
 - [x] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair. Hosted smoke passed; live browser supported, paraphrased, and unsupported flows produced the expected evidence/not-found states with no console logs.
-- [ ] Record the final deployment URL, deployed commit, and verification date/time in `README.md`, `docs/evaluation.md`, and the Devpost notes.
+- [x] Record the final deployment URL, deployed commit, and verification date/time in `README.md`, `docs/evaluation.md`, and the Devpost notes; all three now name the Render deploy `dep-daas7v3bc2fs738i45e0` from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6`.
 
 ## 5. Demo assets
 
