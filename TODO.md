@@ -21,7 +21,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] Confirm this is the existing published PolicyLens Devpost project (ID `1398136`), not a second submission.
 - [x] Confirm the repository is public and its default branch is `main`.
 - [x] Confirm the repository contains no secrets or private data.
-- [ ] Re-check the live deadline and submission state immediately before the final Devpost update.
+- [x] Re-check the live deadline and submission state immediately before the final Devpost update. Devpost connector check at `2026-08-31T17:38:04Z` reported `submissions_open` through `2026-08-31T21:00:00Z`.
 
 ## 2. Canonical release and repository hygiene
 
@@ -49,7 +49,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] The comparison flow works in the hosted desktop browser pass.
 - [x] “Why this answer?” and evidence-copy controls are present.
 - [x] Loading, visible focus, reduced-motion, pointer-aware hover, and press-feedback styles are implemented.
-- [x] Render `/healthz` is healthy and hosted smoke passes.
+- [ ] Confirm the live Render origin is healthy and hosted smoke passes. The latest controlled retest returned HTTP 502; the earlier hosted smoke result is historical and must be rerun after repair.
 - [x] Hosted desktop supported and unsupported flows complete with no console errors.
 - [ ] Complete a fresh incognito/private-browser test of the hosted supported, paraphrased, comparison, and unsupported flows.
 - [ ] Complete a keyboard-only walkthrough and record visible focus plus usable primary controls.
@@ -60,11 +60,13 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 ## 4. Deployment alignment
 
 - [x] Render uses `npm ci && npm run build` and `npm start`.
-- [x] Render uses `/healthz` as the health check.
+- [ ] Configure the Render Health Check Path as `/healthz`; the current Render dashboard value is blank.
 - [x] Record the currently verified Render URL: https://hacksocial-policylens.onrender.com
 - [x] Record the currently verified deployed application commit: `71ace683e292a5f8edd00635e52e8e5c793429ea`.
-- [ ] Confirm the Render service auto-deploy branch is `main` after branch cleanup.
-- [ ] If Render is not tracking `main`, redeploy the exact intended `main` commit and repeat hosted smoke and browser checks.
+- [ ] Change the Render service auto-deploy branch to `main`; the current dashboard still points to the deleted `codex/policylens-prize-max` branch.
+- [ ] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds.
+- [ ] Resolve the current public availability failure: the controlled `GET /healthz` retest returned HTTP 502 on 2026-08-31, even though the dashboard listed the old deploy as `Deploy succeeded | Live`.
+- [ ] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair.
 - [ ] Record the final deployment URL, deployed commit, and verification date/time in `README.md`, `docs/evaluation.md`, and the Devpost notes.
 
 ## 5. Demo assets
