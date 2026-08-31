@@ -60,12 +60,12 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 ## 4. Deployment alignment
 
 - [x] Render uses `npm ci && npm run build` and `npm start`.
-- [ ] Configure the Render Health Check Path as `/healthz`; the current Render dashboard value is blank.
+- [x] Configure the Render Health Check Path as `/healthz`; verified in the Render dashboard on 2026-08-31 at 18:08 UTC.
 - [x] Record the currently verified Render URL: https://hacksocial-policylens.onrender.com
 - [x] Record the currently verified deployed application commit: `71ace683e292a5f8edd00635e52e8e5c793429ea`.
-- [ ] Change the Render service auto-deploy branch to `main`; the current dashboard still points to the deleted `codex/policylens-prize-max` branch.
+- [x] Change the Render service auto-deploy branch to `main`; verified in the Render dashboard and service branch link on 2026-08-31 at 18:08 UTC.
 - [ ] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds.
-- [ ] Resolve the current public availability failure: the controlled `GET /healthz` retest returned HTTP 502 on 2026-08-31, even though the dashboard listed the old deploy as `Deploy succeeded | Live`.
+- [ ] Resolve the current public availability failure: `GET /healthz` still returns HTTP 502. Render status reports “Service instability in Singapore,” with deploys primarily affected and a fix under monitoring as of 2026-08-31; retry after the incident is resolved.
 - [ ] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair.
 - [ ] Record the final deployment URL, deployed commit, and verification date/time in `README.md`, `docs/evaluation.md`, and the Devpost notes.
 
