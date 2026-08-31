@@ -10,7 +10,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - Canonical branch: `main`
 - Current main head: `b9a636d639509919c1d318a876e923bc6fb391f6`
 - Application release checkpoint: `876cdcd621ee25e4eb23650313df30e04c2b02e3`
-- Current Render application commit: `71ace683e292a5f8edd00635e52e8e5c793429ea`
+- Current Render application commit: `b9a636d639509919c1d318a876e923bc6fb391f6`
 - Current Devpost deadline recorded from Devpost: 2026-08-31 21:00 UTC / 2026-09-01 02:30 IST. Re-check the live deadline before the final update.
 
 ## 1. Eligibility and submission identity
@@ -49,7 +49,7 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] The comparison flow works in the hosted desktop browser pass.
 - [x] “Why this answer?” and evidence-copy controls are present.
 - [x] Loading, visible focus, reduced-motion, pointer-aware hover, and press-feedback styles are implemented.
-- [ ] Confirm the live Render origin is healthy and hosted smoke passes. The latest controlled retest returned HTTP 502; the earlier hosted smoke result is historical and must be rerun after repair.
+- [x] Confirm the live Render origin is healthy and hosted smoke passes. After the transient Render Singapore incident cleared, `/healthz` returned HTTP 200 with `{\"status\":\"ok\",\"checks\":{\"build\":\"ok\"}}` and hosted smoke passed on 2026-08-31.
 - [x] Hosted desktop supported and unsupported flows complete with no console errors.
 - [ ] Complete a fresh incognito/private-browser test of the hosted supported, paraphrased, comparison, and unsupported flows.
 - [ ] Complete a keyboard-only walkthrough and record visible focus plus usable primary controls.
@@ -62,11 +62,11 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - [x] Render uses `npm ci && npm run build` and `npm start`.
 - [x] Configure the Render Health Check Path as `/healthz`; verified in the Render dashboard on 2026-08-31 at 18:08 UTC.
 - [x] Record the currently verified Render URL: https://hacksocial-policylens.onrender.com
-- [x] Record the currently verified deployed application commit: `71ace683e292a5f8edd00635e52e8e5c793429ea`.
+- [x] Record the currently verified deployed application commit: `b9a636d639509919c1d318a876e923bc6fb391f6`.
 - [x] Change the Render service auto-deploy branch to `main`; verified in the Render dashboard and service branch link on 2026-08-31 at 18:08 UTC.
-- [ ] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds.
-- [ ] Resolve the current public availability failure: `GET /healthz` still returns HTTP 502. Render status reports “Service instability in Singapore,” with deploys primarily affected and a fix under monitoring as of 2026-08-31; retry after the incident is resolved.
-- [ ] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair.
+- [x] Trigger a fresh deploy from the intended `main` commit and confirm it succeeds. Render deploy `dep-daas7v3bc2fs738i45e0` reports `Deploy succeeded | Live` for source `b9a636d639509919c1d318a876e923bc6fb391f6`.
+- [x] Resolve the transient public availability failure: after the Render Singapore incident moved through recovery, `/healthz` returned HTTP 200 and the deployed service is live.
+- [x] Rerun `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` and repeat hosted browser checks after the repair. Hosted smoke passed; live browser supported, paraphrased, and unsupported flows produced the expected evidence/not-found states with no console logs.
 - [ ] Record the final deployment URL, deployed commit, and verification date/time in `README.md`, `docs/evaluation.md`, and the Devpost notes.
 
 ## 5. Demo assets
