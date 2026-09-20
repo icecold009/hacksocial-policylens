@@ -35,6 +35,22 @@ Measured locally on August 26, 2026 against the production-style server at `http
 
 This is local browser evidence, not proof of hosted, incognito, keyboard-only, or cross-browser behavior. The release smoke command now provides a repeatable HTTP check for either the local production-style server or a verified hosted origin; it does not replace rendered browser QA.
 
+## TypeSafe shadow evaluation
+
+Measured locally on September 20, 2026 with the recorded fixture in `data/evaluation/typesafe-shadow.json` and `npm run evaluate`. The fixture covers direct, paraphrased, close-candidate, unsupported, multi-condition, adversarial, and independent comparison cases. It does not use a live TypeSafe credential.
+
+| Measure | Result |
+| --- | ---: |
+| Shadow cases | 8/8 |
+| Candidate-set membership | 5/5 |
+| Expected-section selection | 5/5 |
+| Deterministic/TypeSafe candidate agreement | 4/5 |
+| Deterministic/TypeSafe status agreement | 5/5 |
+| Selections outside the allowlist | 0 |
+| TypeSafe calls suppressed for not-found or needs-review | 3/3 |
+
+The one candidate disagreement is intentional coverage for a close-candidate fixture. Shadow mode keeps the deterministic evidence user-visible. These results are local fixture evidence only; they do not prove live TypeSafe API compatibility, provider latency, hosted behavior, or active-mode safety.
+
 ## Hosted release verification
 
 Measured on August 31, 2026 against the Render origin `https://hacksocial-policylens.onrender.com`, deployed from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via Render deploy `dep-daas7v3bc2fs738i45e0`:

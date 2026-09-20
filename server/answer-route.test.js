@@ -31,7 +31,7 @@ function createResponse() {
 
 async function runRequest(options) {
   const response = createResponse()
-  await handleAnswerRequest(createRequest(options), response)
+  await handleAnswerRequest(createRequest(options), response, options)
   return { ...response, json: response.body ? JSON.parse(response.body) : null }
 }
 
@@ -85,5 +85,41 @@ test('uses forwarded client identity only when the proxy is explicitly trusted',
 
   assert.equal(getClientKey(request, {}), 'direct:10.0.0.2')
   assert.equal(getClientKey(request, { POLICYLENS_TRUST_PROXY: 'true' }), 'proxy:203.0.113.10')
+})
+
+test('does not expose TypeSafe credentials through the answer route', async () => {
+  const secret = 'typesafe-route-secret'
+  const result = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-typesafe-secret',
+    environment: {
+      NODE_ENV: 'development',
+      POLICYLENS_TYPESAFE_MODE: 'shadow',
+      POLICYLENS_TYPESAFE_ENDPOINT: 'http://127.0.0.1:8788/v1/systemone',
+      POLICYLENS_TYPESAFE_API_KEY: secret,
+      POLICYLENS_TYPESAFE_MODEL: 'jev-test',
+    },
+    typesafeFetchImpl: async (_url, options) => {
+      assert.equal(options.headers.Authorization, `Bearer ${secret}`)
+      const request = JSON.parse(options.body)
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => JSON.stringify({
+          answers: {
+            candidateId: {
+              choice: request.state.candidates[0].id,
+              confidence: 0.9,
+              probabilities: Object.fromEntries(request.state.candidates.map((candidate, index) => [candidate.id, index === 0 ? 0.9 : 0.1])),
+            },
+          },
+        }),
+      }
+    },
+  })
+
+  assert.equal(result.statusCode, 200)
+  assert.doesNotMatch(JSON.stringify(result.json), new RegExp(secret))
 })
 

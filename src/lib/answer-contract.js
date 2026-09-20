@@ -1,5 +1,6 @@
 export const ANSWER_STATUSES = ['found', 'not_found', 'needs_review', 'error']
 export const EVIDENCE_STRENGTHS = ['strong', 'partial', 'weak']
+export const EVIDENCE_SELECTIONS = ['deterministic', 'typesafe-shadow', 'typesafe-active', 'deterministic-fallback']
 export const ANSWER_LIMITS = Object.freeze({
   answer: 2_000,
   nextStep: 1_000,
@@ -12,6 +13,9 @@ export const ANSWER_LIMITS = Object.freeze({
   sourceUrl: 2_048,
   diagnosticTerms: 64,
   diagnosticCandidates: 3,
+  diagnosticProbabilities: 3,
+  evidenceSelection: 32,
+  evidenceSelectionVersion: 64,
 })
 
 const DISCLAIMER = 'PolicyLens is an explainer, not a substitute for your school’s official guidance. Confirm important decisions with the school.'
@@ -25,7 +29,12 @@ function toEvidenceItem(policy, section) {
   }
 }
 
-export function createAnswerResponse({ policy, retrieval }) {
+export function createAnswerResponse({ policy, retrieval, metadata = {} }) {
+  const selectionMetadata = {
+    evidenceSelection: metadata.evidenceSelection ?? 'deterministic',
+    evidenceSelectionVersion: metadata.evidenceSelectionVersion ?? 'retrieval-v1',
+  }
+
   if (!retrieval || !policy) {
     return {
       status: 'error',
@@ -36,6 +45,7 @@ export function createAnswerResponse({ policy, retrieval }) {
       nextStep: 'Reload the selected policy and try again.',
       disclaimer: DISCLAIMER,
       errorCode: 'INVALID_ANSWER_INPUT',
+      ...selectionMetadata,
     }
   }
 
@@ -48,6 +58,7 @@ export function createAnswerResponse({ policy, retrieval }) {
       evidenceStrength: retrieval.evidenceStrength,
       nextStep: retrieval.evidence.nextStep ?? '',
       disclaimer: DISCLAIMER,
+      ...selectionMetadata,
     }
   }
 
@@ -60,6 +71,7 @@ export function createAnswerResponse({ policy, retrieval }) {
       evidenceStrength: 'partial',
       nextStep: retrieval.reason,
       disclaimer: DISCLAIMER,
+      ...selectionMetadata,
     }
   }
 
@@ -71,6 +83,7 @@ export function createAnswerResponse({ policy, retrieval }) {
     evidenceStrength: 'weak',
     nextStep: retrieval.reason ?? 'No grounded answer is available.',
     disclaimer: DISCLAIMER,
+    ...selectionMetadata,
     ...(retrieval.errorCode ? { errorCode: retrieval.errorCode } : {}),
   }
 }
@@ -88,6 +101,12 @@ export function validateAnswerResponse(response) {
 
   if (response.answerSource !== undefined && !['local', 'provider'].includes(response.answerSource)) {
     errors.push('answerSource must be local or provider when present.')
+  }
+  if (response.evidenceSelection !== undefined && !EVIDENCE_SELECTIONS.includes(response.evidenceSelection)) {
+    errors.push('evidenceSelection must be a known bounded value when present.')
+  }
+  if (response.evidenceSelectionVersion !== undefined && (typeof response.evidenceSelectionVersion !== 'string' || !response.evidenceSelectionVersion.trim() || response.evidenceSelectionVersion.length > ANSWER_LIMITS.evidenceSelectionVersion)) {
+    errors.push('evidenceSelectionVersion must be a bounded string when present.')
   }
   if (response.providerNotice !== undefined && (typeof response.providerNotice !== 'string' || !response.providerNotice.trim() || response.providerNotice.length > ANSWER_LIMITS.providerNotice)) {
     errors.push('providerNotice must be a non-empty string when present.')
@@ -107,6 +126,36 @@ export function validateAnswerResponse(response) {
             errors.push(`diagnostics.candidates[${index}] is malformed.`)
           }
         })
+      }
+
+      if (response.diagnostics.reranking !== undefined) {
+        const reranking = response.diagnostics.reranking
+        if (!reranking || typeof reranking !== 'object' || Array.isArray(reranking)) {
+          errors.push('diagnostics.reranking must be an object when present.')
+        } else {
+          for (const key of ['deterministicCandidateId', 'typesafeCandidateId']) {
+            if (reranking[key] !== null && (typeof reranking[key] !== 'string' || reranking[key].length > ANSWER_LIMITS.documentId)) {
+              errors.push(`diagnostics.reranking.${key} must be a bounded string or null.`)
+            }
+          }
+          if (!['off', 'shadow', 'active'].includes(reranking.mode)) errors.push('diagnostics.reranking.mode is invalid.')
+          if (typeof reranking.candidateSetMembership !== 'boolean') errors.push('diagnostics.reranking.candidateSetMembership must be boolean.')
+          for (const key of ['confidence']) {
+            if (reranking[key] !== null && (typeof reranking[key] !== 'number' || !Number.isFinite(reranking[key]) || reranking[key] < 0 || reranking[key] > 1)) {
+              errors.push(`diagnostics.reranking.${key} must be a number from 0 to 1 or null.`)
+            }
+          }
+          for (const key of ['agreement', 'statusAgreement']) {
+            if (reranking[key] !== null && typeof reranking[key] !== 'boolean') errors.push(`diagnostics.reranking.${key} must be boolean or null.`)
+          }
+          if (!reranking.probabilities || typeof reranking.probabilities !== 'object' || Array.isArray(reranking.probabilities) || Object.keys(reranking.probabilities).length > ANSWER_LIMITS.diagnosticProbabilities) {
+            errors.push('diagnostics.reranking.probabilities must be a bounded object.')
+          } else if (Object.values(reranking.probabilities).some((value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)) {
+            errors.push('diagnostics.reranking.probabilities must contain values from 0 to 1.')
+          }
+          if (typeof reranking.source !== 'string' || reranking.source.length > ANSWER_LIMITS.evidenceSelection) errors.push('diagnostics.reranking.source is invalid.')
+          if (typeof reranking.version !== 'string' || reranking.version.length > ANSWER_LIMITS.evidenceSelectionVersion) errors.push('diagnostics.reranking.version is invalid.')
+        }
       }
     }
   }
