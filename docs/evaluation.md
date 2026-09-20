@@ -37,12 +37,12 @@ This is local browser evidence, not proof of hosted, incognito, keyboard-only, o
 
 ## Hosted release verification
 
-Measured on August 30, 2026 against the Render origin `https://hacksocial-policylens.onrender.com`, deployed from commit `71ace683e292a5f8edd00635e52e8e5c793429ea`:
+Measured on August 31, 2026 against the Render origin `https://hacksocial-policylens.onrender.com`, deployed from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via Render deploy `dep-daas7v3bc2fs738i45e0`:
 
 The verified release was promoted to `main` as checkpoint `876cdcd621ee25e4eb23650313df30e04c2b02e3`. GitHub Actions verification run #9 passed on that exact `main` commit; the deployed application tree remains the same verified deterministic release tree.
 
 - `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed for `/healthz`, `/`, a grounded answer with evidence, and an unsupported-question abstention.
-- A hosted desktop/fresh-tab browser pass completed the grounded attendance answer, comparison control, and unsupported-question flow.
+- A hosted desktop/fresh-tab browser pass completed the grounded attendance answer, paraphrased question, and unsupported-question flow.
 - The browser console reported no warnings or errors during those flows.
 - A 320px mobile viewport showed no horizontal overflow during the local browser pass; a hosted mobile pass, incognito/private-browser pass, complete keyboard-only pass, and peer usability study are not claimed.
 - Render free-tier cold-start latency was not benchmarked.
@@ -50,4 +50,5 @@ The verified release was promoted to `main` as checkpoint `876cdcd621ee25e4eb236
 ## Development-server note
 
 After the Vite 8.2.2 upgrade, `npm run dev:ui -- --host 127.0.0.1 --port 5174` reached the Vite ready state locally. The production-style `npm start` path and `npm run smoke` are release checks. Hosted desktop/fresh-tab behavior is now verified separately from local browser evidence; incognito/private-browser and complete keyboard-only behavior remain unclaimed.
+
 

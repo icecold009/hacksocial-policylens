@@ -105,7 +105,7 @@ The answer contract is:
 - Main release checkpoint: `876cdcd621ee25e4eb23650313df30e04c2b02e3`
 - The prize-max slice contains five release commits after the reviewed hardening base and was promoted into `main` as one squashed release checkpoint.
 - Verification: `npm run verify`, `npm run smoke`, and the dependency audit are the required release gates.
-- Deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), verified against commit `71ace683e292a5f8edd00635e52e8e5c793429ea` on August 30, 2026.
+- Deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), deployed from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via Render deploy `dep-daas7v3bc2fs738i45e0` on August 31, 2026.
 - Hosted verification: `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed, and the hosted desktop flow covered a grounded answer, comparison, and unsupported-question abstention with no console warnings or errors. The free Render service may cold-start after inactivity.
 - Submission: the existing HackSocial 2026 PolicyLens entry remains the single Devpost project to update.
 
@@ -131,5 +131,6 @@ The answer contract is:
 - [ ] Add the demo video and captured screenshots to the existing Devpost entry.
 
 The Devpost write-up and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They distinguish verified hosted evidence from the still-unpublished media assets.
+
 
 

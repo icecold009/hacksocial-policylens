@@ -85,7 +85,7 @@ Measured local verification passes data validation, the production build, 53 aut
 
 ## Public Demo Link
 
-[PolicyLens live demo](https://hacksocial-policylens.onrender.com) is deployed on Render and was verified against commit `71ace683e292a5f8edd00635e52e8e5c793429ea` on August 30, 2026. The free service may cold-start after inactivity; no hosted latency benchmark is claimed.
+[PolicyLens live demo](https://hacksocial-policylens.onrender.com) is deployed on Render from the canonical `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via deploy `dep-daas7v3bc2fs738i45e0` on August 31, 2026. The free service may cold-start after inactivity; no hosted latency benchmark is claimed.
 
 ## Public Repository Link
 
@@ -131,7 +131,8 @@ PolicyLens is already submitted to HackSocial 2026 at https://devpost.com/softwa
 - Public project: https://devpost.com/software/policylens-xopvfe
 - Public repository: https://github.com/icecold009/hacksocial-policylens
 - Public demo: https://hacksocial-policylens.onrender.com
-- Deployed commit: 71ace683e292a5f8edd00635e52e8e5c793429ea
+- Deployed commit: b9a636d639509919c1d318a876e923bc6fb391f6
 - Demo video: not published yet
 - Screenshots: four hosted QA captures completed; Devpost upload remains
+
 
