@@ -78,6 +78,14 @@ The app is intentionally small and dependency-light for an older laptop. The cur
 
 The measured results are recorded in [`docs/evaluation.md`](docs/evaluation.md). The answer service is deterministic by default; when all provider settings in `.env.example` are configured, it can request a constrained explanation server-side and falls back locally if the provider is unavailable or returns unsupported evidence. No provider credential is sent to the browser. Dependency and synthetic-source attribution is recorded in [`docs/attribution.md`](docs/attribution.md).
 
+## TypeSafe evidence reranking
+
+The optional TypeSafe adapter evaluates only the deterministic top-three evidence candidates. It receives the question, selected policy ID, candidate IDs, headings, policy text, retrieval scores, and matched terms, then returns a bounded Choice judgment: one supplied candidate ID, probabilities, and confidence. It never writes the answer or citation.
+
+`POLICYLENS_TYPESAFE_MODE=off` is the default. `shadow` calls TypeSafe for local evaluation but keeps the deterministic answer visible; `active` is implemented behind a confidence gate and falls back to deterministic evidence on missing credentials, invalid output, timeout, or low confidence. The first rollout must remain in `off` or `shadow` mode until live provider compatibility, shadow evaluation, latency, and security evidence are independently reviewed.
+
+TypeSafe credentials stay in server environment variables. The request and response are size-limited, HTTPS is required outside local development, transient 429/5xx responses receive one bounded retry, candidate IDs are allowlisted, and development diagnostics contain IDs and probabilities only—not questions, policy text, credentials, or provider payloads. Primary and comparison policy requests are reranked independently.
+
 The answer API also applies an in-memory limit of 30 requests per client per minute for the local demo. It does not persist client identifiers or request content.
 
 The answer contract is:
@@ -97,7 +105,7 @@ The answer contract is:
 
 ## Current AI/ML boundary
 
-**AI/ML** — PolicyLens already has the core retrieval-augmented explanation boundary: it retrieves passages locally, can send only the question and those passages to an optional server-side provider, requires exact citations, validates the returned contract, and falls back to a deterministic local explanation when the provider is unavailable. Semantic embeddings, arbitrary-document ingestion, and hosted-provider measurement remain future work.
+**AI/ML** — PolicyLens has a deterministic retrieval boundary, an optional TypeSafe evidence-selection judgment over retrieved candidates, and an optional server-side explanation provider. Exact citations remain code-owned and validated. Semantic embeddings, arbitrary-document ingestion, and hosted-provider measurement remain future work.
 
 ## Release status
 

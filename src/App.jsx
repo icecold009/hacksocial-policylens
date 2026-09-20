@@ -47,6 +47,21 @@ function getStatusLabel(status) {
   return 'Not found'
 }
 
+function getRuntimeChip(response) {
+  if (response.evidenceSelection === 'typesafe-active') return 'TypeSafe-assisted evidence'
+  if (response.evidenceSelection === 'typesafe-shadow') return 'Shadow reranking · local answers'
+  if (response.evidenceSelection === 'deterministic-fallback') return 'Deterministic fallback'
+  if (response.answerSource === 'provider') return 'Server provider · grounded evidence'
+  return 'Deterministic demo · no API keys'
+}
+
+function getEvidenceSelectionLabel(selection) {
+  if (selection === 'typesafe-active') return 'TYPESAFE-ASSISTED EVIDENCE'
+  if (selection === 'typesafe-shadow') return 'LOCAL DETERMINISTIC EVIDENCE · SHADOW CHECK'
+  if (selection === 'deterministic-fallback') return 'LOCAL DETERMINISTIC EVIDENCE · RERANKER FALLBACK'
+  return 'LOCAL DETERMINISTIC EVIDENCE'
+}
+
 const answerApiBaseUrl = import.meta.env.DEV ? 'http://127.0.0.1:8787' : ''
 
 function keepValidResponse(response, policy) {
@@ -185,7 +200,7 @@ function App() {
           <span className="wordmark-mark">P</span>
           <span>PolicyLens</span>
         </a>
-        <span className="privacy-chip"><span className="chip-dot" /> Deterministic demo · no API keys</span>
+        <span className="privacy-chip"><span className="chip-dot" /> {getRuntimeChip(result)}</span>
       </header>
 
       <section className="hero" id="top">
@@ -283,7 +298,7 @@ function App() {
               </div>
             ) : result.status === 'found' ? (
               <div className="answer-content">
-                <div className="answer-mode">{result.answerSource === 'provider' ? 'AI-GENERATED EXPLANATION' : 'LOCAL GROUNDED EXPLANATION'} · {result.evidenceStrength.toUpperCase()} EVIDENCE</div>
+                <div className="answer-mode">{getEvidenceSelectionLabel(result.evidenceSelection)} · {result.answerSource === 'provider' ? 'AI-GENERATED EXPLANATION' : 'LOCAL GROUNDED EXPLANATION'} · {result.evidenceStrength.toUpperCase()} EVIDENCE</div>
                 {result.providerNotice && <p className="provider-notice" role="status">{result.providerNotice}</p>}
                 <h2>{result.answer}</h2>
                 <details className="evidence-block" open>

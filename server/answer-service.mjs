@@ -3,6 +3,7 @@ import { createAnswerResponse, validateAnswerResponse } from '../src/lib/answer-
 import { retrieveEvidence } from '../src/lib/retrieval.js'
 import { requestProviderAnswer } from './provider.mjs'
 import { createRateLimiter } from './rate-limit.mjs'
+import { getTypeSafeMode, requestTypeSafeRerank, resolveTypeSafeConfig, TYPESAFE_SELECTION_VERSION } from './typesafe-reranker.mjs'
 
 export const MAX_REQUEST_BYTES = 8 * 1024
 
@@ -39,7 +40,7 @@ function hasProviderConfig(environment) {
   return Boolean(environment?.POLICYLENS_AI_ENDPOINT && environment?.POLICYLENS_AI_API_KEY && environment?.POLICYLENS_AI_MODEL)
 }
 
-function attachDevelopmentDiagnostics(response, retrieval, environment, includeDiagnostics) {
+function attachDevelopmentDiagnostics(response, retrieval, environment, includeDiagnostics, reranking) {
   if (environment?.NODE_ENV !== 'development' || includeDiagnostics !== true) return response
 
   return {
@@ -51,8 +52,32 @@ function attachDevelopmentDiagnostics(response, retrieval, environment, includeD
         score: candidate.score,
         matchedTerms: candidate.matchedTerms ?? [],
       })),
+      ...(reranking ? { reranking } : {}),
     },
   }
+}
+
+function rerankingDiagnostics(retrieval, mode, reranking) {
+  const deterministicCandidateId = retrieval.status === 'found' ? retrieval.evidence?.id ?? null : null
+  const candidateIds = new Set((retrieval.candidates ?? []).map((candidate) => candidate.id))
+  const typesafeCandidateId = reranking?.candidateId ?? null
+
+  return {
+    mode,
+    deterministicCandidateId,
+    typesafeCandidateId,
+    candidateSetMembership: Boolean(typesafeCandidateId && candidateIds.has(typesafeCandidateId)),
+    confidence: reranking?.confidence ?? null,
+    probabilities: reranking?.probabilities ?? {},
+    agreement: reranking ? typesafeCandidateId === deterministicCandidateId : null,
+    statusAgreement: reranking ? retrieval.status === 'found' : null,
+    source: reranking?.source ?? 'none',
+    version: reranking?.version ?? 'none',
+  }
+}
+
+function evidenceStrengthForCandidate(candidate) {
+  return candidate?.score >= 2 ? 'strong' : 'partial'
 }
 
 function createErrorResult(errorCode, reason, statusCode) {
@@ -84,23 +109,66 @@ export async function answerQuestion(payload, options = {}) {
 
   const environment = options.environment ?? process.env
   const retrieval = retrieveEvidence(policy, payload.question)
-  const providerResponse = retrieval.status === 'found'
+  const typeSafeMode = getTypeSafeMode(environment)
+  const typeSafeConfig = resolveTypeSafeConfig(environment)
+  const typeSafeResult = retrieval.status === 'found' && typeSafeMode !== 'off'
+    ? await requestTypeSafeRerank({
+      question: payload.question,
+      policyId: policy.id,
+      candidates: retrieval.candidates,
+      environment,
+      fetchImpl: options.typesafeFetchImpl,
+      timeoutMs: options.typesafeTimeoutMs,
+    })
+    : null
+  const candidateMap = new Map((retrieval.candidates ?? []).map((candidate) => [candidate.id, candidate]))
+  const validTypeSafeResult = typeSafeResult && candidateMap.has(typeSafeResult.candidateId) ? typeSafeResult : null
+  const activeSelection = typeSafeMode === 'active'
+    && validTypeSafeResult
+    && typeSafeConfig
+    && validTypeSafeResult.confidence >= typeSafeConfig.minConfidence
+    ? candidateMap.get(validTypeSafeResult.candidateId)
+    : null
+  const retrievalForAnswer = activeSelection
+    ? { ...retrieval, evidence: activeSelection, evidenceStrength: evidenceStrengthForCandidate(activeSelection) }
+    : retrieval
+  const selectionMetadata = {
+    evidenceSelection: retrieval.status === 'found' && typeSafeMode === 'shadow' && validTypeSafeResult
+      ? 'typesafe-shadow'
+      : retrieval.status === 'found' && activeSelection
+        ? 'typesafe-active'
+        : retrieval.status === 'found' && (typeSafeMode === 'active' || typeSafeMode === 'shadow')
+          ? 'deterministic-fallback'
+          : 'deterministic',
+    evidenceSelectionVersion: validTypeSafeResult ? TYPESAFE_SELECTION_VERSION : 'retrieval-v1',
+  }
+  const localResponse = createAnswerResponse({ policy, retrieval: retrievalForAnswer, metadata: selectionMetadata })
+  const providerCandidates = activeSelection ? [activeSelection] : retrieval.candidates
+  const providerAllowed = retrieval.status === 'found'
+    && (typeSafeMode === 'off' || (typeSafeMode === 'active' && Boolean(activeSelection)))
+  const providerResponse = providerAllowed
     ? await requestProviderAnswer({
       question: payload.question,
       policy,
-      candidates: retrieval.candidates,
+      candidates: providerCandidates,
       environment,
       fetchImpl: options.fetchImpl,
       timeoutMs: options.providerTimeoutMs,
     })
     : null
   const response = providerResponse ?? {
-    ...createAnswerResponse({ policy, retrieval }),
-    ...(retrieval.status === 'found' && hasProviderConfig(environment)
+    ...localResponse,
+    ...(providerAllowed && hasProviderConfig(environment)
       ? { providerNotice: 'The AI provider was unavailable, so PolicyLens showed its local grounded explanation instead.' }
       : {}),
   }
-  const responseWithDiagnostics = attachDevelopmentDiagnostics(response, retrieval, environment, options.includeDiagnostics)
+  const responseWithDiagnostics = attachDevelopmentDiagnostics(
+    { ...response, ...selectionMetadata },
+    retrieval,
+    environment,
+    options.includeDiagnostics,
+    typeSafeMode !== 'off' ? rerankingDiagnostics(retrieval, typeSafeMode, validTypeSafeResult) : null,
+  )
   const validation = validateAnswerResponse(responseWithDiagnostics)
 
   if (!validation.valid) {
@@ -192,7 +260,14 @@ export async function handleAnswerRequest(request, response, options = {}) {
   }
 
   try {
-    const result = await answerQuestion(await readJsonBody(request), { environment })
+    const result = await answerQuestion(await readJsonBody(request), {
+      environment,
+      fetchImpl: options.fetchImpl,
+      providerTimeoutMs: options.providerTimeoutMs,
+      typesafeFetchImpl: options.typesafeFetchImpl,
+      typesafeTimeoutMs: options.typesafeTimeoutMs,
+      includeDiagnostics: options.includeDiagnostics,
+    })
     sendJson(response, result.statusCode, result.body, corsHeaders)
   } catch (error) {
     const errorCode = error?.code === API_ERROR_CODES.REQUEST_TOO_LARGE ? API_ERROR_CODES.REQUEST_TOO_LARGE : API_ERROR_CODES.INVALID_JSON

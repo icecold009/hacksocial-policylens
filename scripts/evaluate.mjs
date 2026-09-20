@@ -6,6 +6,7 @@ import { validateAnswerResponse } from '../src/lib/answer-contract.js'
 import { answerQuestion } from '../server/answer-service.mjs'
 
 const cases = JSON.parse(await readFile(new URL('../data/evaluation/questions.json', import.meta.url), 'utf8'))
+const shadowCases = JSON.parse(await readFile(new URL('../data/evaluation/typesafe-shadow.json', import.meta.url), 'utf8'))
 const policies = new Map(samplePolicies.map((policy) => [policy.id, policy]))
 const results = cases.map((item) => {
   const policy = policies.get(item.policyId)
@@ -107,5 +108,105 @@ const malformedResponses = [
 const rejectedMalformed = malformedResponses.filter((response) => !validateAnswerResponse(response).valid).length
 lines.push(`- malformed-response rejection: ${rejectedMalformed}/${malformedResponses.length}`)
 
+const typeSafeEnvironment = {
+  NODE_ENV: 'development',
+  POLICYLENS_TYPESAFE_MODE: 'shadow',
+  POLICYLENS_TYPESAFE_ENDPOINT: 'http://127.0.0.1:8788/v1/systemone',
+  POLICYLENS_TYPESAFE_API_KEY: 'evaluation-fixture-key',
+  POLICYLENS_TYPESAFE_MODEL: 'evaluation-fixture-model',
+}
+
+function typeSafeFixtureResponse(candidateId, candidates) {
+  const confidence = 0.88
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: () => null },
+    text: async () => JSON.stringify({
+      answers: {
+        candidateId: {
+          choice: candidateId,
+          confidence,
+          probabilities: Object.fromEntries(candidates.map((candidate, index) => [candidate.id, index === 0 ? confidence : (1 - confidence) / Math.max(1, candidates.length - 1)])),
+        },
+      },
+    }),
+  }
+}
+
+async function evaluateShadowPolicy(item, policyId, expectedStatus, expectedSection, providerCandidateId) {
+  const calls = []
+  const result = await answerQuestion(
+    { policyId, question: item.question },
+    {
+      environment: typeSafeEnvironment,
+      includeDiagnostics: true,
+      typesafeFetchImpl: async (_url, options) => {
+        const request = JSON.parse(options.body)
+        calls.push(request.state.policyId)
+        const candidateId = providerCandidateId ?? request.state.candidates[0]?.id
+        return typeSafeFixtureResponse(candidateId, request.state.candidates)
+      },
+    },
+  )
+  const retrieval = retrieveEvidence(policies.get(policyId), item.question)
+  const reranking = result.body.diagnostics?.reranking ?? null
+  const typesafeCandidateId = reranking?.typesafeCandidateId ?? null
+  const candidateSetMembership = reranking?.candidateSetMembership ?? false
+  const deterministicSelectedSection = reranking?.deterministicCandidateId ?? null
+  const statusMatches = result.body.status === expectedStatus
+  const expectedSelectionMatches = !expectedSection || typesafeCandidateId === expectedSection
+  const rerankingExpected = Boolean(expectedSection)
+
+  return {
+    id: item.id,
+    policyId,
+    expectedStatus,
+    actualStatus: result.body.status,
+    deterministicSelectedSection,
+    typesafeSelectedSection: typesafeCandidateId,
+    expectedSection: expectedSection ?? null,
+    candidateSetMembership,
+    confidence: reranking?.confidence ?? null,
+    agreement: reranking?.agreement ?? null,
+    statusAgreement: rerankingExpected && typesafeCandidateId ? reranking?.statusAgreement ?? false : null,
+    outsideAllowlist: Boolean(typesafeCandidateId && !candidateSetMembership),
+    callCount: calls.length,
+    retrievalStatus: retrieval.status,
+    passed: statusMatches && expectedSelectionMatches && (!rerankingExpected || candidateSetMembership),
+  }
+}
+
+const shadowResults = []
+for (const item of shadowCases) {
+  shadowResults.push(await evaluateShadowPolicy(item, item.policyId, item.expectedStatus, item.expectedSection, item.providerCandidateId))
+  if (item.comparisonPolicyId) {
+    shadowResults.push(await evaluateShadowPolicy(item, item.comparisonPolicyId, item.comparisonExpectedStatus, item.comparisonExpectedSection, item.comparisonProviderCandidateId))
+  }
+}
+
+const shadowDecisions = shadowResults.filter((result) => result.typesafeSelectedSection)
+const shadowExpectedSelections = shadowResults.filter((result) => result.expectedSection)
+const shadowStatusAgreements = shadowDecisions.filter((result) => result.statusAgreement !== null)
+const shadowFailures = shadowResults.filter((result) => !result.passed)
+const confidenceValues = shadowDecisions.map((result) => result.confidence).filter((confidence) => typeof confidence === 'number')
+const suppressedTypesafeCalls = shadowResults.filter((result) => ['not_found', 'needs_review'].includes(result.expectedStatus) && result.callCount === 0).length
+
+lines.push(`- TypeSafe shadow cases: ${shadowResults.filter((result) => result.passed).length}/${shadowResults.length}`)
+lines.push(`- shadow candidate-set membership: ${shadowDecisions.filter((result) => result.candidateSetMembership).length}/${shadowDecisions.length}`)
+lines.push(`- shadow expected-section selection: ${shadowExpectedSelections.filter((result) => result.typesafeSelectedSection === result.expectedSection).length}/${shadowExpectedSelections.length}`)
+lines.push(`- shadow deterministic/TypeSafe agreement: ${shadowDecisions.filter((result) => result.agreement).length}/${shadowDecisions.length}`)
+lines.push(`- shadow status agreement: ${shadowStatusAgreements.filter((result) => result.statusAgreement).length}/${shadowStatusAgreements.length}`)
+lines.push(`- shadow selections outside allowlist: ${shadowDecisions.filter((result) => result.outsideAllowlist).length}`)
+lines.push(`- TypeSafe suppressed for not-found or needs-review: ${suppressedTypesafeCalls}/${shadowResults.filter((result) => ['not_found', 'needs_review'].includes(result.expectedStatus)).length}`)
+if (confidenceValues.length > 0) lines.push(`- shadow confidence range: ${Math.min(...confidenceValues).toFixed(2)}-${Math.max(...confidenceValues).toFixed(2)}`)
+
+if (shadowFailures.length > 0) {
+  lines.push('TypeSafe shadow failures:')
+  shadowFailures.forEach((failure) => {
+    lines.push(`- ${failure.id}: expected ${failure.expectedStatus}/${failure.expectedSection ?? '-'}, got ${failure.actualStatus}/${failure.typesafeSelectedSection ?? '-'}`)
+  })
+}
+
 console.log(lines.join('\n'))
-if (failures.length > 0) process.exitCode = 1
+if (failures.length > 0 || shadowFailures.length > 0) process.exitCode = 1

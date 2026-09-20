@@ -16,6 +16,8 @@ test('builds a valid found response with exact citation evidence', () => {
   assert.equal(response.evidence.length, 1)
   assert.equal(response.evidence[0].documentId, 'attendance')
   assert.equal(response.evidence[0].section, 'Reporting an absence')
+  assert.equal(response.evidenceSelection, 'deterministic')
+  assert.equal(response.evidenceSelectionVersion, 'retrieval-v1')
   assert.equal(validateAnswerResponse(response).valid, true)
 })
 
@@ -128,5 +130,36 @@ test('rejects oversized answer contract fields', () => {
 
   assert.equal(validation.valid, false)
   assert.match(validation.errors.join(' '), /answer must be a string/)
+})
+
+test('rejects unknown evidence-selection metadata and unsafe reranking diagnostics', () => {
+  const validation = validateAnswerResponse({
+    status: 'found',
+    answer: 'Grounded answer.',
+    evidence: [{ documentId: 'attendance', section: 'Reporting an absence', quote: 'Notify the school.', sourceUrl: null }],
+    evidenceStrength: 'strong',
+    nextStep: '',
+    disclaimer: 'Test disclaimer',
+    evidenceSelection: 'free-form-model',
+    diagnostics: {
+      queryTerms: [],
+      candidates: [],
+      reranking: {
+        mode: 'shadow',
+        deterministicCandidateId: 'attendance-window',
+        typesafeCandidateId: 'attendance-window',
+        candidateSetMembership: true,
+        confidence: 0.9,
+        probabilities: { 'attendance-window': 'certain' },
+        agreement: true,
+        statusAgreement: true,
+        source: 'typesafe',
+        version: 'typesafe-choice-v1',
+      },
+    },
+  })
+
+  assert.equal(validation.valid, false)
+  assert.match(validation.errors.join(' '), /evidenceSelection|probabilities/)
 })
 
