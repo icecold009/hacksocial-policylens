@@ -369,7 +369,7 @@ function App() {
 
       <footer className="footer">
         <span>POLICYLENS <span className="footer-muted">/</span> HACKSOCIAL MVP</span>
-        <span>Evidence first <span className="footer-muted">·</span> Privacy conscious <span className="footer-muted">·</span> Student friendly</span>
+        <span>Evidence first <span className="footer-muted">·</span> Privacy conscious <span className="footer-muted">·</span> Student friendly <span className="footer-muted">·</span> <a href="https://shauryasaria.me" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", letterSpacing: "inherit" }}>Personal website</a></span>
       </footer>
     </main>
   )
