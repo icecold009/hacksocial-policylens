@@ -3,6 +3,7 @@ import { createAnswerResponse, validateAnswerResponse } from '../src/lib/answer-
 import { retrieveEvidence } from '../src/lib/retrieval.js'
 import { requestProviderAnswer } from './provider.mjs'
 import { createRateLimiter } from './rate-limit.mjs'
+import { API_MAX_CONCURRENT_REQUESTS, createConcurrencyLimiter, createUpstreamCallGuard } from './capacity-limits.mjs'
 import { getTypeSafeMode, requestTypeSafeRerank, resolveTypeSafeConfig, TYPESAFE_SELECTION_VERSION } from './typesafe-reranker.mjs'
 
 export const MAX_REQUEST_BYTES = 8 * 1024
@@ -17,11 +18,19 @@ export const API_ERROR_CODES = Object.freeze({
   METHOD_NOT_ALLOWED: 'METHOD_NOT_ALLOWED',
   UNSUPPORTED_MEDIA_TYPE: 'UNSUPPORTED_MEDIA_TYPE',
   RATE_LIMITED: 'RATE_LIMITED',
+  SERVICE_BUSY: 'SERVICE_BUSY',
 })
 
 const policies = new Map(samplePolicies.map((policy) => [policy.id, policy]))
-const LOCAL_UI_ORIGINS = new Set(['http://127.0.0.1:5173', 'http://localhost:5173'])
+const LOCAL_UI_ORIGINS = new Set([
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+  'http://127.0.0.1:5205',
+  'http://localhost:5205',
+])
 const answerRateLimiter = createRateLimiter()
+const apiConcurrencyLimiter = createConcurrencyLimiter(API_MAX_CONCURRENT_REQUESTS)
+const upstreamCallGuard = createUpstreamCallGuard()
 
 export function getClientKey(request, environment = process.env) {
   if (environment?.POLICYLENS_TRUST_PROXY === 'true') {
@@ -111,6 +120,8 @@ export async function answerQuestion(payload, options = {}) {
   const retrieval = retrieveEvidence(policy, payload.question)
   const typeSafeMode = getTypeSafeMode(environment)
   const typeSafeConfig = resolveTypeSafeConfig(environment)
+  const requestGuard = options.upstreamCallGuard ?? upstreamCallGuard
+  const upstreamRequest = (operation) => requestGuard.run(operation)
   const typeSafeResult = retrieval.status === 'found' && typeSafeMode !== 'off'
     ? await requestTypeSafeRerank({
       question: payload.question,
@@ -119,6 +130,7 @@ export async function answerQuestion(payload, options = {}) {
       environment,
       fetchImpl: options.typesafeFetchImpl,
       timeoutMs: options.typesafeTimeoutMs,
+      upstreamRequest,
     })
     : null
   const candidateMap = new Map((retrieval.candidates ?? []).map((candidate) => [candidate.id, candidate]))
@@ -143,7 +155,7 @@ export async function answerQuestion(payload, options = {}) {
     evidenceSelectionVersion: validTypeSafeResult ? TYPESAFE_SELECTION_VERSION : 'retrieval-v1',
   }
   const localResponse = createAnswerResponse({ policy, retrieval: retrievalForAnswer, metadata: selectionMetadata })
-  const providerCandidates = activeSelection ? [activeSelection] : retrieval.candidates
+  const providerCandidates = retrievalForAnswer.evidence ? [retrievalForAnswer.evidence] : []
   const providerAllowed = retrieval.status === 'found'
     && (typeSafeMode === 'off' || (typeSafeMode === 'active' && Boolean(activeSelection)))
   const providerResponse = providerAllowed
@@ -154,6 +166,7 @@ export async function answerQuestion(payload, options = {}) {
       environment,
       fetchImpl: options.fetchImpl,
       timeoutMs: options.providerTimeoutMs,
+      upstreamRequest,
     })
     : null
   const response = providerResponse ?? {
@@ -215,7 +228,7 @@ function sendJson(response, statusCode, body, extraHeaders = {}) {
 function getCorsHeaders(request) {
   const origin = request.headers.origin
   return origin && LOCAL_UI_ORIGINS.has(origin)
-    ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+    ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Expose-Headers': 'Retry-After', Vary: 'Origin' }
     : {}
 }
 
@@ -259,22 +272,36 @@ export async function handleAnswerRequest(request, response, options = {}) {
     return
   }
 
+  const requestLimiter = options.apiConcurrencyLimiter ?? apiConcurrencyLimiter
+  const releaseRequest = requestLimiter.acquire()
+  if (!releaseRequest) {
+    request.resume?.()
+    const result = createErrorResult(API_ERROR_CODES.SERVICE_BUSY, 'The answer service is busy. Try again shortly.', 503)
+    sendJson(response, result.statusCode, result.body, { ...corsHeaders, 'Retry-After': '1' })
+    return
+  }
+
   try {
-    const result = await answerQuestion(await readJsonBody(request), {
-      environment,
-      fetchImpl: options.fetchImpl,
-      providerTimeoutMs: options.providerTimeoutMs,
-      typesafeFetchImpl: options.typesafeFetchImpl,
-      typesafeTimeoutMs: options.typesafeTimeoutMs,
-      includeDiagnostics: options.includeDiagnostics,
-    })
-    sendJson(response, result.statusCode, result.body, corsHeaders)
-  } catch (error) {
-    const errorCode = error?.code === API_ERROR_CODES.REQUEST_TOO_LARGE ? API_ERROR_CODES.REQUEST_TOO_LARGE : API_ERROR_CODES.INVALID_JSON
-    const statusCode = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 413 : 400
-    const reason = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 'The request body is too large.' : 'The request body is not valid JSON.'
-    const result = createErrorResult(errorCode, reason, statusCode)
-    sendJson(response, result.statusCode, result.body, corsHeaders)
+    try {
+      const result = await answerQuestion(await readJsonBody(request), {
+        environment,
+        fetchImpl: options.fetchImpl,
+        providerTimeoutMs: options.providerTimeoutMs,
+        typesafeFetchImpl: options.typesafeFetchImpl,
+        typesafeTimeoutMs: options.typesafeTimeoutMs,
+        includeDiagnostics: options.includeDiagnostics,
+        upstreamCallGuard: options.upstreamCallGuard,
+      })
+      sendJson(response, result.statusCode, result.body, corsHeaders)
+    } catch (error) {
+      const errorCode = error?.code === API_ERROR_CODES.REQUEST_TOO_LARGE ? API_ERROR_CODES.REQUEST_TOO_LARGE : API_ERROR_CODES.INVALID_JSON
+      const statusCode = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 413 : 400
+      const reason = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 'The request body is too large.' : 'The request body is not valid JSON.'
+      const result = createErrorResult(errorCode, reason, statusCode)
+      sendJson(response, result.statusCode, result.body, corsHeaders)
+    }
+  } finally {
+    releaseRequest()
   }
 }
 

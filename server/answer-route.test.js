@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
 import { API_ERROR_CODES, getClientKey, handleAnswerRequest } from './answer-service.mjs'
+import { createConcurrencyLimiter } from './capacity-limits.mjs'
 
 function createRequest({ method = 'POST', body = '', contentType = 'application/json', origin, remoteAddress = 'route-test' } = {}) {
   const request = Readable.from([body])
@@ -78,6 +79,50 @@ test('handles CORS preflight without invoking the answer flow', async () => {
   assert.equal(result.body, '')
   assert.equal(result.headers['Access-Control-Allow-Methods'], 'POST, OPTIONS')
   assert.equal(result.headers['Access-Control-Allow-Origin'], 'http://localhost:5173')
+  assert.equal(result.headers['Access-Control-Expose-Headers'], 'Retry-After')
+})
+
+test('allows only the configured Vite development port for local browser requests', async () => {
+  const result = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    origin: 'http://127.0.0.1:5205',
+    remoteAddress: 'route-vite-5205',
+  })
+
+  assert.equal(result.statusCode, 200)
+  assert.equal(result.headers['Access-Control-Allow-Origin'], 'http://127.0.0.1:5205')
+})
+
+test('does not grant CORS access to unapproved origins', async () => {
+  const result = await runRequest({
+    method: 'OPTIONS',
+    origin: 'https://attacker.example',
+    remoteAddress: 'route-blocked-origin',
+  })
+
+  assert.equal(result.statusCode, 204)
+  assert.equal('Access-Control-Allow-Origin' in result.headers, false)
+})
+
+test('returns a recoverable 503 when the API concurrency limit is full', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  const firstResponse = createResponse()
+  const firstRequest = handleAnswerRequest(createRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-capacity-first',
+  }), firstResponse, { apiConcurrencyLimiter })
+
+  const second = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-capacity-second',
+    apiConcurrencyLimiter,
+  })
+  await firstRequest
+
+  assert.equal(second.statusCode, 503)
+  assert.equal(second.json.errorCode, API_ERROR_CODES.SERVICE_BUSY)
+  assert.equal(second.headers['Retry-After'], '1')
+  assert.equal(apiConcurrencyLimiter.inFlight, 0)
 })
 
 test('uses forwarded client identity only when the proxy is explicitly trusted', () => {

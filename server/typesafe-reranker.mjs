@@ -193,6 +193,7 @@ export async function requestTypeSafeRerank({
   environment = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
+  upstreamRequest = async (operation) => ({ accepted: true, value: await operation() }),
 }) {
   const config = resolveTypeSafeConfig(environment)
   if (!config || typeof fetchImpl !== 'function') return null
@@ -209,7 +210,7 @@ export async function requestTypeSafeRerank({
     const timeout = setTimeout(() => controller.abort(), effectiveTimeoutMs)
 
     try {
-      const response = await fetchImpl(config.endpoint, {
+      const attemptResult = await upstreamRequest(() => fetchImpl(config.endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${config.apiKey}`,
@@ -217,7 +218,9 @@ export async function requestTypeSafeRerank({
         },
         body: serializedRequest,
         signal: controller.signal,
-      })
+      }))
+      if (!attemptResult?.accepted) return null
+      const response = attemptResult.value
 
       if ((response.status === 429 || response.status >= 500) && attempt < TYPESAFE_MAX_ATTEMPTS - 1) continue
       if (!response.ok) return null

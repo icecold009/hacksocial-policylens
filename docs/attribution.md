@@ -14,6 +14,7 @@ The direct dependencies declared in `package.json` and installed from `package-l
 | React DOM | 18.3.1 | MIT | Browser rendering |
 | Vite | 8.2.2 | MIT | Development server and production bundler |
 | `@vitejs/plugin-react` | 6.1.1 | MIT | React-aware Vite integration |
+| Playwright | 1.63.0 | Apache-2.0 | Local browser regression and optional Chromium test runner |
 
 The installed dependency tree and licenses were checked locally on August 28, 2026. Recheck dependency metadata before redistributing a future lockfile or adding new packages.
 

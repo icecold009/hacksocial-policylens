@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { samplePolicies } from './data/policies.js'
 import { createAnswerResponse, validateAnswerResponse } from './lib/answer-contract.js'
+import { requestAnswerWithDeadline } from './lib/answer-request.js'
+import { formatEvidenceForCopy } from './lib/evidence-copy.js'
 import { retrieveEvidence } from './lib/retrieval.js'
 
 const initialQuery = 'What should I do if I will be absent?'
@@ -23,18 +25,29 @@ function createServiceErrorResponse(policy, errorCode, reason) {
   })
 }
 
-function getErrorCopy(errorCode) {
+function getErrorCopy(errorCode, isDevelopment) {
   switch (errorCode) {
     case 'EMPTY_QUESTION':
       return { title: 'Ask a question first.', recovery: 'Write a question about the selected document.' }
     case 'QUESTION_TOO_LONG':
       return { title: 'That question is too long.', recovery: 'Shorten it to 280 characters or fewer, then try again.' }
     case 'RATE_LIMITED':
-      return { title: 'The demo rate limit is active.', recovery: 'Wait briefly before trying another question.' }
+      return { title: 'The demo rate limit is active.', recovery: 'Submit your question again after the wait.' }
+    case 'SERVICE_BUSY':
+      return { title: 'The answer service is at capacity.', recovery: 'Wait briefly, then retry your question.' }
+    case 'REQUEST_TIMEOUT':
+      return { title: 'The search took too long.', recovery: 'The request was stopped so the page could recover. Try again.' }
+    case 'REQUEST_CANCELLED':
+      return { title: 'Search cancelled.', recovery: 'You can change the question or try again.' }
     case 'API_UNAVAILABLE':
-      return { title: 'The answer service is unavailable.', recovery: 'Start the local API and try again.' }
+      return {
+        title: 'The answer service is unavailable.',
+        recovery: isDevelopment
+          ? 'Check that the local answer service is running, then try again.'
+          : 'Check your connection and retry. The hosted service may be temporarily unavailable.',
+      }
     case 'INVALID_RESPONSE':
-      return { title: 'The answer could not be verified.', recovery: 'Try again; unsupported or malformed answers are never rendered.' }
+      return { title: 'The answer could not be verified.', recovery: 'The response was malformed or did not match trusted policy content. Try again.' }
     default:
       return { title: 'I couldn’t answer that yet.', recovery: 'Try a different question or choose another sample.' }
   }
@@ -81,16 +94,23 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasAsked, setHasAsked] = useState(false)
   const [copyState, setCopyState] = useState('idle')
+  const [comparisonCopyState, setComparisonCopyState] = useState('idle')
   const [comparisonResult, setComparisonResult] = useState(null)
   const [result, setResult] = useState(() => createDefaultResponse(samplePolicies[0]))
   const requestSequence = useRef(0)
   const activeRequestController = useRef(null)
 
-  function cancelPendingRequest() {
+  function cancelPendingRequest(showNotice = false) {
     requestSequence.current += 1
     activeRequestController.current?.abort()
     activeRequestController.current = null
     setIsLoading(false)
+    if (showNotice) {
+      const policy = samplePolicies.find((item) => item.id === selectedId) ?? samplePolicies[0]
+      setResult(createServiceErrorResponse(policy, 'REQUEST_CANCELLED', 'Search cancelled.'))
+      setHasAsked(true)
+      setComparisonResult(null)
+    }
   }
 
   useEffect(() => () => {
@@ -114,6 +134,7 @@ function App() {
     setComparisonId('')
     setHasAsked(false)
     setCopyState('idle')
+    setComparisonCopyState('idle')
     setComparisonResult(null)
     const nextPolicy = samplePolicies.find((policy) => policy.id === event.target.value) ?? samplePolicies[0]
     setResult(createDefaultResponse(nextPolicy))
@@ -124,14 +145,15 @@ function App() {
     setQuestion(exampleQuestion)
     setHasAsked(false)
     setCopyState('idle')
+    setComparisonCopyState('idle')
     setComparisonResult(null)
   }
 
-  async function handleAsk(event) {
+  async function submitQuestion() {
     if (isLoading) return
-    event.preventDefault()
     setHasAsked(true)
     setCopyState('idle')
+    setComparisonCopyState('idle')
     setComparisonResult(null)
 
     setIsLoading(true)
@@ -141,19 +163,36 @@ function App() {
     activeRequestController.current = controller
 
     async function requestAnswer(policy) {
-      try {
-        const response = await fetch(`${answerApiBaseUrl}/api/answer`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ policyId: policy.id, question }),
-          signal: controller.signal,
-        })
-        const payload = await response.json()
-        return keepValidResponse(payload, policy)
-      } catch (error) {
-        if (error?.name === 'AbortError') return null
-        return createServiceErrorResponse(policy, 'API_UNAVAILABLE', 'The local answer service is unavailable. Try again in a moment.')
+      const request = await requestAnswerWithDeadline({
+        apiBaseUrl: answerApiBaseUrl,
+        policyId: policy.id,
+        question,
+        signal: controller.signal,
+      })
+
+      if (request.type === 'cancelled') return null
+      if (request.type === 'timeout') return createServiceErrorResponse(policy, 'REQUEST_TIMEOUT', 'The answer service did not respond before the request deadline.')
+      if (request.type === 'unavailable') return createServiceErrorResponse(policy, 'API_UNAVAILABLE', 'The answer service could not be reached.')
+      if (request.type === 'rate_limited') {
+        const waitDuration = request.retryAfterSeconds
+          ? `${request.retryAfterSeconds} second${request.retryAfterSeconds === 1 ? '' : 's'}`
+          : null
+        const waitMessage = request.retryAfterSeconds
+          ? `Wait ${waitDuration} before retrying.`
+          : 'Wait briefly before retrying.'
+        return createServiceErrorResponse(policy, 'RATE_LIMITED', waitMessage)
       }
+      if (request.type === 'service_busy') {
+        const waitDuration = request.retryAfterSeconds
+          ? `${request.retryAfterSeconds} second${request.retryAfterSeconds === 1 ? '' : 's'}`
+          : null
+        const waitMessage = request.retryAfterSeconds
+          ? `The service is at capacity. Retry in ${waitDuration}.`
+          : 'The service is at capacity. Wait briefly, then retry.'
+        return createServiceErrorResponse(policy, 'SERVICE_BUSY', waitMessage)
+      }
+      if (request.type === 'invalid') return createServiceErrorResponse(policy, 'INVALID_RESPONSE', 'The answer service returned a malformed response.')
+      return keepValidResponse(request.payload, policy)
     }
 
     try {
@@ -172,23 +211,29 @@ function App() {
     }
   }
 
-  async function handleCopyEvidence() {
-    const evidence = result.evidence[0]
-    if (!evidence) return
+  function handleAsk(event) {
+    event.preventDefault()
+    void submitQuestion()
+  }
 
-    const copyText = [
-      `PolicyLens evidence: ${activePolicy.title}`,
-      `Section: ${evidence.section}`,
-      `Source: ${activePolicy.source}`,
-      `\"${evidence.quote}\"`,
-    ].join('\n')
+  function handleRetry() {
+    void submitQuestion()
+  }
+
+  function handleCancelRequest() {
+    cancelPendingRequest(true)
+  }
+
+  async function handleCopyEvidence(policy, evidence, setState) {
+    const copyText = formatEvidenceForCopy(policy, evidence)
+    if (!copyText) return
 
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
       await navigator.clipboard.writeText(copyText)
-      setCopyState('copied')
+      setState('copied')
     } catch {
-      setCopyState('unavailable')
+      setState('unavailable')
     }
   }
 
@@ -245,7 +290,10 @@ function App() {
             <textarea id="question" value={question} onChange={(event) => setQuestion(event.target.value)} rows="3" maxLength="280" disabled={isLoading} aria-describedby="question-count" placeholder="e.g. What happens if I miss school?" />
             <div className="question-footer">
               <span className="character-count" id="question-count">{question.length} / 280</span>
-              <button className="ask-button" type="submit" disabled={isLoading} aria-busy={isLoading}>{isLoading ? 'Searching evidence…' : 'Find the answer'} <span aria-hidden="true">→</span></button>
+              <div className="request-actions">
+                {isLoading && <button className="cancel-button" type="button" onClick={handleCancelRequest}>Cancel search</button>}
+                <button className="ask-button" type="submit" disabled={isLoading} aria-busy={isLoading}>{isLoading ? 'Searching evidence…' : 'Find the answer'} <span aria-hidden="true">→</span></button>
+              </div>
             </div>
             {activePolicy.sections.length > 0 && <div className="example-questions" aria-label="Example questions">
               <span>TRY AN EXAMPLE</span>
@@ -302,19 +350,25 @@ function App() {
                 {result.providerNotice && <p className="provider-notice" role="status">{result.providerNotice}</p>}
                 <h2>{result.answer}</h2>
                 <details className="evidence-block" open>
-                  <summary className="evidence-heading"><span className="quote-mark" aria-hidden="true">“</span><span>SUPPORTING EVIDENCE</span></summary>
-                  <blockquote>{result.evidence[0].quote}</blockquote>
-                  <div className="evidence-meta"><span>{activePolicy.source}</span><span>§ {result.evidence[0].section}</span></div>
+                  <summary className="evidence-heading"><span className="quote-mark" aria-hidden="true">“</span><span>SUPPORTING EVIDENCE · {result.evidence.length}</span></summary>
+                  <div className="evidence-list">
+                    {result.evidence.map((item, index) => (
+                      <div className="evidence-passage" key={`${item.documentId}-${item.section}-${index}`}>
+                        <blockquote>{item.quote}</blockquote>
+                        <div className="evidence-meta"><span>{item.sourceUrl || activePolicy.source}</span><span>§ {item.section}</span></div>
+                      </div>
+                    ))}
+                  </div>
                   <div className="evidence-actions">
-                    <button className="copy-button" type="button" onClick={handleCopyEvidence}>
-                      {copyState === 'copied' ? 'Evidence copied' : 'Copy evidence'} <span aria-hidden="true">↗</span>
+                    <button className="copy-button" type="button" onClick={() => handleCopyEvidence(activePolicy, result.evidence, setCopyState)}>
+                      {copyState === 'copied' ? 'All evidence copied' : 'Copy all evidence'} <span aria-hidden="true">↗</span>
                     </button>
                     {copyState === 'unavailable' && <span className="copy-status" role="status">Clipboard access is unavailable here.</span>}
                   </div>
                 </details>
                 <details className="why-answer">
                   <summary>Why this answer?</summary>
-                  <p>{result.answerSource === 'provider' ? 'The explanation was generated from the retrieved passages above. PolicyLens checked that every citation exactly matched supplied evidence before rendering it.' : 'The local fallback selected the strongest matching passage from this document. PolicyLens shows the exact evidence instead of inventing details outside the source.'}</p>
+                  <p>{result.answerSource === 'provider' ? 'The provider response was accepted only when its answer, next step, and citation matched the trusted response data for the selected passage. Any other output falls back to the local answer.' : 'The local fallback selected the strongest matching passage from this document. PolicyLens shows the exact evidence instead of inventing details outside the source.'}</p>
                 </details>
                 {result.nextStep && <p className="next-step"><strong>Grounded next step:</strong> {result.nextStep}</p>}
                 {activePolicy.sections.filter((section) => section.heading !== result.evidence[0].section).slice(0, 2).length > 0 && <div className="follow-up-questions" aria-label="Suggested follow-up questions">
@@ -334,18 +388,28 @@ function App() {
                 <h2>There is more than one possible passage.</h2>
                 <p>{result.nextStep}</p>
                 <div className="candidate-list">
-                  {result.evidence.slice(0, 3).map((candidate) => (
-                    <blockquote key={`${candidate.documentId}-${candidate.section}`}>{candidate.quote}<footer>§ {candidate.section}</footer></blockquote>
+                  {result.evidence.map((candidate, index) => (
+                    <div className="evidence-passage" key={`${candidate.documentId}-${candidate.section}-${index}`}>
+                      <blockquote>{candidate.quote}</blockquote>
+                      <div className="evidence-meta"><span>{candidate.sourceUrl || activePolicy.source}</span><span>§ {candidate.section}</span></div>
+                    </div>
                   ))}
+                </div>
+                <div className="evidence-actions">
+                  <button className="copy-button" type="button" onClick={() => handleCopyEvidence(activePolicy, result.evidence, setCopyState)}>
+                    {copyState === 'copied' ? 'All evidence copied' : 'Copy all evidence'} <span aria-hidden="true">↗</span>
+                  </button>
+                  {copyState === 'unavailable' && <span className="copy-status" role="status">Clipboard access is unavailable here.</span>}
                 </div>
                 <div className="not-found-contract"><span>REVIEW CONTRACT</span> PolicyLens will not silently choose between equally matched passages.</div>
               </div>
             ) : (
               <div className="not-found-content">
                 <div className="not-found-icon" aria-hidden="true">?</div>
-                <h2>{result.status === 'error' ? getErrorCopy(result.errorCode).title : 'I couldn’t find that in this document.'}</h2>
-                <p>{result.nextStep} {result.status === 'error' ? getErrorCopy(result.errorCode).recovery : 'Try a different question or choose another sample.'}</p>
+                <h2>{result.status === 'error' ? getErrorCopy(result.errorCode, import.meta.env.DEV).title : 'I couldn’t find that in this document.'}</h2>
+                <p>{result.nextStep} {result.status === 'error' ? getErrorCopy(result.errorCode, import.meta.env.DEV).recovery : 'Try a different question or choose another sample.'}</p>
                 <div className="not-found-contract"><span>NOT-FOUND CONTRACT</span> No unsupported answer is presented as fact.</div>
+                {result.status === 'error' && <div className="evidence-actions"><button className="retry-button" type="button" onClick={handleRetry}>Try again</button></div>}
               </div>
             )}
           </section>
@@ -358,8 +422,20 @@ function App() {
               </div>
               {comparisonResult.response.status === 'found' ? <>
                 <p className="comparison-answer">{comparisonResult.response.answer}</p>
-                <blockquote>{comparisonResult.response.evidence[0].quote}</blockquote>
-                <div className="evidence-meta"><span>{comparisonResult.policy.source}</span><span>§ {comparisonResult.response.evidence[0].section}</span></div>
+                <div className="evidence-list">
+                  {comparisonResult.response.evidence.map((item, index) => (
+                    <div className="evidence-passage" key={`${item.documentId}-${item.section}-${index}`}>
+                      <blockquote>{item.quote}</blockquote>
+                      <div className="evidence-meta"><span>{item.sourceUrl || comparisonResult.policy.source}</span><span>§ {item.section}</span></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="evidence-actions">
+                  <button className="copy-button" type="button" onClick={() => handleCopyEvidence(comparisonResult.policy, comparisonResult.response.evidence, setComparisonCopyState)}>
+                    {comparisonCopyState === 'copied' ? 'All evidence copied' : 'Copy all evidence'} <span aria-hidden="true">↗</span>
+                  </button>
+                  {comparisonCopyState === 'unavailable' && <span className="copy-status" role="status">Clipboard access is unavailable here.</span>}
+                </div>
               </> : <p className="comparison-empty">{comparisonResult.response.nextStep || 'This document does not provide a supported answer to that question.'}</p>}
             </div>
           </section>}

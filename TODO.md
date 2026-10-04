@@ -1,5 +1,14 @@
 # PolicyLens submission checklist
 
+## Completion work status — October 4, 2026
+
+- The current GitHub `main` head observed through the repository connector is `c429b50c973d1f9776e6e966371a7e3171a4e286`.
+- The last recorded Render release remains `b9a636d639509919c1d318a876e923bc6fb391f6` from August 31, 2026. It is historical evidence; current hosted health and deployment were not verified during this update.
+- Feature implementation and review are on `codex/completion-plan-20261004`; the hosted PR/check results will be recorded here after publication. Do not mark hosted deployment, private-browser, peer-usability, or Devpost-media items complete from local evidence.
+- Local verification: `npm ci`, `npm run verify` (87 tests, 12 browser checks, evaluation 25/25), `npm run smoke`, `npm run measure:latency` (10 measured samples; median 2.3ms, p95 2.7ms), and `git diff --check` passed.
+- Local dependency audit could not reach `registry.npmjs.org`; the existing GitHub Actions audit step must provide the hosted result. Direct access to the Render origin was blocked, so current deployment and hosted performance remain unverified.
+- See [`docs/operations.md`](docs/operations.md) for privacy, request limits, response budgets, health/release identifiers, measurement, and rollback procedure.
+
 Use this file as the single canonical pre-submission checklist. Check a box only after recording evidence in the relevant section. Keep implementation work on a separate `codex/*` branch and promote it to `main` only through review and explicit approval.
 
 ## Submission identity
@@ -8,9 +17,9 @@ Use this file as the single canonical pre-submission checklist. Check a box only
 - Devpost project: https://devpost.com/software/policylens-xopvfe
 - Canonical repository: https://github.com/icecold009/hacksocial-policylens
 - Canonical branch: `main`
-- Current main head: `b9a636d639509919c1d318a876e923bc6fb391f6`
+- Current main head observed 2026-10-04: `c429b50c973d1f9776e6e966371a7e3171a4e286`
 - Application release checkpoint: `876cdcd621ee25e4eb23650313df30e04c2b02e3`
-- Current Render application commit: `b9a636d639509919c1d318a876e923bc6fb391f6`
+- Last recorded Render application commit (2026-08-31; current state unverified): `b9a636d639509919c1d318a876e923bc6fb391f6`
 - Current Devpost deadline recorded from Devpost: 2026-08-31 21:00 UTC / 2026-09-01 02:30 IST. Re-check the live deadline before the final update.
 
 ## 1. Eligibility and submission identity
