@@ -54,7 +54,7 @@ test('PolicyLens browser regression flows', { timeout: 150_000 }, async (t) => {
     assert.equal(await canBind(port), true, `Port ${port} is already in use; refusing to start a second instance.`)
   }
 
-  const child = spawn(process.execPath, ['scripts/dev.mjs'], {
+  const child = spawn(process.execPath, ['scripts/dev.mjs', '--host', '127.0.0.1', '--port', '5205', '--strictPort'], {
     cwd: repositoryRoot,
     env: { ...process.env, NODE_ENV: 'development' },
     stdio: ['ignore', 'pipe', 'pipe'],

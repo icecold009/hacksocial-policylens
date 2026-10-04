@@ -6,7 +6,7 @@ On the local feature-work tree, `npm ci` succeeded, `npm run verify` passed (87 
 
 The local performance probe used two warm-ups and ten measured synthetic answer requests: median 2.3ms, p95 2.7ms, minimum 1.8ms, maximum 2.7ms. `/healthz` reported release `unknown` because no `POLICYLENS_RELEASE_ID` was configured. These figures describe this local run only; they are not hosted-performance measurements.
 
-The current hosted Render state was not verified on October 4. The local environment blocked the outbound HTTPS connection to the Render origin, so no current health, deployment, or hosted latency claim is made. The last hosted results below are dated August 31 and remain historical. The local `npm audit --omit=optional --audit-level=moderate` request also could not reach `registry.npmjs.org`; the existing GitHub Actions workflow runs the dependency audit and its result is pending the feature branch check.
+The current hosted Render state was not verified on October 4. The local environment blocked the outbound HTTPS connection to the Render origin, so no current health, deployment, or hosted latency claim is made. The last hosted results below are dated August 31 and remain historical. The local `npm audit --omit=optional --audit-level=moderate` request could not reach `registry.npmjs.org`. The existing GitHub Actions workflow runs the dependency audit; see [PR #8](https://github.com/icecold009/hacksocial-policylens/pull/8) for its current check result after each branch update.
 
 Measured locally on **August 26, 2026** with:
 

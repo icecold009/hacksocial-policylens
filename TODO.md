@@ -4,7 +4,7 @@
 
 - The current GitHub `main` head observed through the repository connector is `c429b50c973d1f9776e6e966371a7e3171a4e286`.
 - The last recorded Render release remains `b9a636d639509919c1d318a876e923bc6fb391f6` from August 31, 2026. It is historical evidence; current hosted health and deployment were not verified during this update.
-- Feature implementation and review are on `codex/completion-plan-20261004`; the hosted PR/check results will be recorded here after publication. Do not mark hosted deployment, private-browser, peer-usability, or Devpost-media items complete from local evidence.
+- Feature implementation and review are proposed in [draft PR #8](https://github.com/icecold009/hacksocial-policylens/pull/8) from `codex/completion-plan-20261004`; use the PR for current check results. It remains unmerged and undeployed. Do not mark hosted deployment, private-browser, peer-usability, or Devpost-media items complete from local evidence.
 - Local verification: `npm ci`, `npm run verify` (87 tests, 12 browser checks, evaluation 25/25), `npm run smoke`, `npm run measure:latency` (10 measured samples; median 2.3ms, p95 2.7ms), and `git diff --check` passed.
 - Local dependency audit could not reach `registry.npmjs.org`; the existing GitHub Actions audit step must provide the hosted result. Direct access to the Render origin was blocked, so current deployment and hosted performance remain unverified.
 - See [`docs/operations.md`](docs/operations.md) for privacy, request limits, response budgets, health/release identifiers, measurement, and rollback procedure.
