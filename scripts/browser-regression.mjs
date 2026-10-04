@@ -218,7 +218,25 @@ test('PolicyLens browser regression flows', { timeout: 150_000 }, async (t) => {
       await page.keyboard.press('Tab')
       assert.match(await page.evaluate(() => document.activeElement?.textContent ?? ''), /Skip to policy workspace/)
       await page.setViewportSize({ width: 320, height: 800 })
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
+      const horizontalOverflow = () => page.evaluate(() => {
+        const viewportWidth = window.innerWidth
+        const offenders = [...document.body.querySelectorAll('*')]
+          .map((element) => {
+            const rect = element.getBoundingClientRect()
+            return {
+              element: `${element.tagName.toLowerCase()}${element.className && typeof element.className === 'string' ? `.${element.className.trim().replaceAll(/\s+/g, '.')}` : ''}`,
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              width: Math.round(rect.width),
+              text: element.textContent?.trim().replaceAll(/\s+/g, ' ').slice(0, 48),
+            }
+          })
+          .filter((item) => item.left < -1 || item.right > viewportWidth + 1)
+          .slice(0, 8)
+        return { viewportWidth, documentWidth: document.documentElement.scrollWidth, offenders }
+      })
+      const initialLayout = await horizontalOverflow()
+      assert.ok(initialLayout.documentWidth <= initialLayout.viewportWidth, `Horizontal overflow at 320px: ${JSON.stringify(initialLayout)}`)
       await page.getByLabel('Ask about the selected policy').fill('Where do I bring an absence note?')
       const answerResponse = page.waitForResponse((response) => (
         response.url() === apiRoute && response.request().method() === 'POST'
@@ -233,7 +251,8 @@ test('PolicyLens browser regression flows', { timeout: 150_000 }, async (t) => {
         document.activeElement?.blur()
         window.scrollTo(0, 0)
       })
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
+      const answerLayout = await horizontalOverflow()
+      assert.ok(answerLayout.documentWidth <= answerLayout.viewportWidth, `Horizontal overflow after answer at 320px: ${JSON.stringify(answerLayout)}`)
       await page.screenshot({ path: join(tmpdir(), `policylens-mobile-${runId}.png`), fullPage: true })
     })
 

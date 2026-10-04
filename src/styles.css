@@ -184,6 +184,7 @@ blockquote { margin: 16px 0 19px; color: #4d5e54; font-family: Georgia, serif; f
   .app-shell { width: min(100% - 32px, 620px); }
   .hero { padding: 60px 0 52px; }
   .workspace { grid-template-columns: 1fr; gap: 34px; }
+  .workspace > * { min-width: 0; }
   .source-panel { order: 2; }
   .query-column { order: 1; }
   .footer { margin-top: 55px; flex-direction: column; }
@@ -191,8 +192,8 @@ blockquote { margin: 16px 0 19px; color: #4d5e54; font-family: Georgia, serif; f
 
 @media (max-width: 480px) {
   .app-shell { width: min(100% - 24px, 620px); }
-  .topbar { padding-top: 18px; }
-  .privacy-chip { font-size: 9px; letter-spacing: 0.04em; }
+  .topbar { flex-wrap: wrap; gap: 12px 18px; padding-top: 18px; }
+  .privacy-chip { max-width: 100%; font-size: 9px; letter-spacing: 0.04em; }
   .hero { padding-top: 52px; }
   h1 { font-size: 57px; }
   .answer-content, .not-found-content { padding-left: 0; padding-right: 0; }
