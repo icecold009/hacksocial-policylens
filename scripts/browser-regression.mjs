@@ -158,7 +158,7 @@ test('PolicyLens browser regression flows', { timeout: 150_000 }, async (t) => {
         const request = route.request().postDataJSON()
         if (request.question !== 'Wait for this stale response') return route.continue()
 
-        await new Promise((resolve) => setTimeout(resolve, 900))
+        await new Promise((resolve) => setTimeout(resolve, 2_500))
         try {
           await route.fulfill({
             status: 200,
@@ -180,13 +180,15 @@ test('PolicyLens browser regression flows', { timeout: 150_000 }, async (t) => {
 
       await page.getByLabel('Ask about the selected policy').fill('Wait for this stale response')
       await page.getByRole('button', { name: 'Find the answer' }).click()
-      await page.getByRole('button', { name: 'Cancel search' }).waitFor()
-      await page.getByRole('button', { name: 'Cancel search' }).click()
+      const cancelButton = page.getByRole('button', { name: 'Cancel search' })
+      await cancelButton.waitFor()
+      // Keep this race test independent of pointer-stability retries while the delayed response settles.
+      await cancelButton.dispatchEvent('click')
       await page.getByRole('heading', { name: 'Search cancelled.' }).waitFor()
       await page.getByLabel('Ask about the selected policy').fill('What should I do if I will be absent?')
       await page.getByRole('button', { name: 'Try again' }).click()
       await page.locator('.answer-content h2').waitFor()
-      await new Promise((resolve) => setTimeout(resolve, 1_000))
+      await new Promise((resolve) => setTimeout(resolve, 2_700))
       assert.doesNotMatch(await page.locator('.answer-content h2').innerText(), /STALE ANSWER/)
       assert.match(await page.locator('.answer-content h2').innerText(), /parent or guardian/i)
       await page.unroute(apiRoute)
