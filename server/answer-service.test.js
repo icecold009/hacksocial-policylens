@@ -196,3 +196,52 @@ test('falls back to the local answer when a configured provider fails', async ()
   assert.equal(result.body.answerSource, 'local')
   assert.match(result.body.providerNotice, /provider was unavailable/i)
 })
+
+test('keeps the deterministic answer when a provider invents answer or next-step details', async () => {
+  const requestQuestion = { policyId: 'attendance', question: 'How do I report an absence?' }
+  const trustedPolicy = samplePolicies.find((policy) => policy.id === requestQuestion.policyId)
+  const providerBody = JSON.stringify({
+    choices: [{
+      message: {
+        content: JSON.stringify({
+          status: 'found',
+          answer: 'Students can report absences at any time and they will always be excused.',
+          evidence: [{
+            documentId: trustedPolicy.id,
+            section: trustedPolicy.sections[0].heading,
+            quote: trustedPolicy.sections[0].text,
+            sourceUrl: trustedPolicy.sourceUrl,
+          }],
+          evidenceStrength: 'strong',
+          nextStep: 'Call the principal for automatic approval.',
+          disclaimer: 'PolicyLens is an explainer, not a substitute for your school’s official guidance. Confirm important decisions with the school.',
+        }),
+      },
+    }],
+  })
+  let providerEvidenceCount = null
+  const result = await answerQuestion(requestQuestion, {
+    environment: { POLICYLENS_AI_ENDPOINT: 'https://provider.example/v1/chat', POLICYLENS_AI_API_KEY: 'test-key', POLICYLENS_AI_MODEL: 'test-model' },
+    fetchImpl: async (_url, options) => {
+      const request = JSON.parse(options.body)
+      providerEvidenceCount = JSON.parse(request.messages[1].content).evidence.length
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(providerBody))
+            controller.close()
+          },
+        }),
+      }
+    },
+  })
+
+  assert.equal(providerEvidenceCount, 1)
+  assert.equal(result.body.answerSource, 'local')
+  assert.equal(result.body.answer, trustedPolicy.sections[0].answer)
+  assert.equal(result.body.nextStep, trustedPolicy.sections[0].nextStep)
+  assert.doesNotMatch(JSON.stringify(result.body), /automatic approval|always be excused/)
+})

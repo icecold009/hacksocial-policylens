@@ -58,7 +58,9 @@ async function assertResponse(response, description) {
 async function runSmoke(baseUrl) {
   const healthResponse = await assertResponse(await fetchWithTimeout(`${baseUrl}/healthz`), 'health check')
   const health = await healthResponse.json()
-  if (health.status !== 'ok' || health.checks?.build !== 'ok') throw new Error('health check did not report a ready build')
+  if (health.status !== 'ok' || health.checks?.build !== 'ok' || typeof health.release !== 'string') {
+    throw new Error('health check did not report a ready build and release label')
+  }
 
   const pageResponse = await assertResponse(await fetchWithTimeout(`${baseUrl}/`), 'application page')
   const page = await pageResponse.text()

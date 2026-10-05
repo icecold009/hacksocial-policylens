@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import http from 'node:http'
+import net from 'node:net'
 import { Readable } from 'node:stream'
-import { API_ERROR_CODES, getClientKey, handleAnswerRequest } from './answer-service.mjs'
+import { API_ERROR_CODES, getClientKey, handleAnswerRequest, MAX_REQUEST_BYTES } from './answer-service.mjs'
+import { createConcurrencyLimiter } from './capacity-limits.mjs'
 
 function createRequest({ method = 'POST', body = '', contentType = 'application/json', origin, remoteAddress = 'route-test' } = {}) {
   const request = Readable.from([body])
@@ -33,6 +36,28 @@ async function runRequest(options) {
   const response = createResponse()
   await handleAnswerRequest(createRequest(options), response, options)
   return { ...response, json: response.body ? JSON.parse(response.body) : null }
+}
+
+function decodeHttpResponse(response) {
+  const boundary = response.indexOf('\r\n\r\n')
+  const headers = response.slice(0, boundary)
+  let body = response.slice(boundary + 4)
+
+  if (/\r\nTransfer-Encoding: chunked(?:\r\n|$)/i.test(headers)) {
+    let decoded = ''
+    let offset = 0
+    while (offset < body.length) {
+      const lineEnd = body.indexOf('\r\n', offset)
+      const chunkSize = Number.parseInt(body.slice(offset, lineEnd), 16)
+      if (!Number.isInteger(chunkSize) || chunkSize === 0) break
+      const chunkStart = lineEnd + 2
+      decoded += body.slice(chunkStart, chunkStart + chunkSize)
+      offset = chunkStart + chunkSize + 2
+    }
+    body = decoded
+  }
+
+  return { headers, body }
 }
 
 test('serves a grounded answer through the HTTP handler', async () => {
@@ -78,6 +103,178 @@ test('handles CORS preflight without invoking the answer flow', async () => {
   assert.equal(result.body, '')
   assert.equal(result.headers['Access-Control-Allow-Methods'], 'POST, OPTIONS')
   assert.equal(result.headers['Access-Control-Allow-Origin'], 'http://localhost:5173')
+  assert.equal(result.headers['Access-Control-Expose-Headers'], 'Retry-After')
+})
+
+test('allows only the configured Vite development port for local browser requests', async () => {
+  const result = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    origin: 'http://127.0.0.1:5205',
+    remoteAddress: 'route-vite-5205',
+  })
+
+  assert.equal(result.statusCode, 200)
+  assert.equal(result.headers['Access-Control-Allow-Origin'], 'http://127.0.0.1:5205')
+})
+
+test('does not grant CORS access to unapproved origins', async () => {
+  const result = await runRequest({
+    method: 'OPTIONS',
+    origin: 'https://attacker.example',
+    remoteAddress: 'route-blocked-origin',
+  })
+
+  assert.equal(result.statusCode, 204)
+  assert.equal('Access-Control-Allow-Origin' in result.headers, false)
+})
+
+test('returns a recoverable 503 when the API concurrency limit is full', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  const firstResponse = createResponse()
+  const firstRequest = handleAnswerRequest(createRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-capacity-first',
+  }), firstResponse, { apiConcurrencyLimiter })
+
+  const second = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-capacity-second',
+    apiConcurrencyLimiter,
+  })
+  await firstRequest
+
+  assert.equal(second.statusCode, 503)
+  assert.equal(second.json.errorCode, API_ERROR_CODES.SERVICE_BUSY)
+  assert.equal(second.headers['Retry-After'], '1')
+  assert.equal(apiConcurrencyLimiter.inFlight, 0)
+})
+
+test('an incomplete request body does not occupy an answer concurrency slot', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  const pendingRequest = new Readable({ read() {} })
+  pendingRequest.method = 'POST'
+  pendingRequest.headers = { 'content-type': 'application/json' }
+  pendingRequest.socket = { remoteAddress: 'route-pending-body' }
+  const pendingResponse = createResponse()
+  const pendingHandler = handleAnswerRequest(pendingRequest, pendingResponse, { apiConcurrencyLimiter, bodyTimeoutMs: 60 })
+
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(apiConcurrencyLimiter.inFlight, 0)
+
+  const validResult = await runRequest({
+    body: JSON.stringify({ policyId: 'attendance', question: 'How do I report an absence?' }),
+    remoteAddress: 'route-valid-during-pending-body',
+    apiConcurrencyLimiter,
+  })
+
+  assert.equal(validResult.statusCode, 200)
+  assert.equal(apiConcurrencyLimiter.inFlight, 0)
+
+  await pendingHandler
+
+  assert.equal(pendingResponse.statusCode, 408)
+  assert.equal(JSON.parse(pendingResponse.body).errorCode, API_ERROR_CODES.REQUEST_TIMEOUT)
+  assert.equal(pendingResponse.headers.Connection, 'close')
+  assert.equal(apiConcurrencyLimiter.inFlight, 0)
+})
+
+test('rejects chunked request bodies over the byte limit and closes the connection', async () => {
+  const result = await runRequest({
+    body: JSON.stringify({ question: 'x'.repeat(MAX_REQUEST_BYTES) }),
+    remoteAddress: 'route-oversized-stream',
+  })
+
+  assert.equal(result.statusCode, 413)
+  assert.equal(result.json.errorCode, API_ERROR_CODES.REQUEST_TOO_LARGE)
+  assert.equal(result.headers.Connection, 'close')
+})
+
+test('returns 408 and closes a real HTTP connection when the request body stalls', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  const server = http.createServer((request, response) => (
+    handleAnswerRequest(request, response, { apiConcurrencyLimiter, bodyTimeoutMs: 60 })
+  ))
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+
+  const { port } = server.address()
+  let socket
+
+  try {
+    const response = await new Promise((resolve, reject) => {
+      let received = ''
+      socket = net.createConnection({ host: '127.0.0.1', port }, () => {
+        socket.write('POST /api/answer HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{}')
+      })
+      socket.setEncoding('utf8')
+      socket.setTimeout(2_000, () => reject(new Error('Timed out waiting for the HTTP 408 response.')))
+      socket.on('data', (chunk) => {
+        received += chunk
+      })
+      socket.on('end', () => resolve(received))
+      socket.on('error', reject)
+    })
+
+    assert.match(response, /^HTTP\/1\.1 408 /)
+    const { headers, body } = decodeHttpResponse(response)
+    assert.match(headers, /(?:^|\r\n)Connection: close(?:\r\n|$)/i)
+    assert.equal(JSON.parse(body).errorCode, API_ERROR_CODES.REQUEST_TIMEOUT)
+    assert.equal(apiConcurrencyLimiter.inFlight, 0)
+  } finally {
+    socket?.destroy()
+    await new Promise((resolve) => server.close(resolve))
+  }
+})
+
+test('handles a client disconnect during body ingestion without occupying answer capacity', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  let handlerError
+  let finishHandler
+  const handlerFinished = new Promise((resolve) => {
+    finishHandler = resolve
+  })
+  const server = http.createServer((request, response) => (
+    handleAnswerRequest(request, response, { apiConcurrencyLimiter, bodyTimeoutMs: 1_000 })
+      .catch((error) => {
+        handlerError = error
+      })
+      .finally(finishHandler)
+  ))
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+
+  let socket
+  try {
+    const { port } = server.address()
+    socket = net.createConnection({ host: '127.0.0.1', port }, () => {
+      socket.write('POST /api/answer HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{}')
+      setTimeout(() => socket.destroy(), 10)
+    })
+
+    let handlerTimeout
+    try {
+      await Promise.race([
+        handlerFinished,
+        new Promise((_, reject) => {
+          handlerTimeout = setTimeout(() => reject(new Error('The disconnected request handler did not finish.')), 1_000)
+        }),
+      ])
+    } finally {
+      clearTimeout(handlerTimeout)
+    }
+
+    assert.equal(handlerError, undefined)
+    assert.equal(apiConcurrencyLimiter.inFlight, 0)
+  } finally {
+    socket?.destroy()
+    await new Promise((resolve) => server.close(resolve))
+  }
 })
 
 test('uses forwarded client identity only when the proxy is explicitly trusted', () => {
@@ -122,4 +319,3 @@ test('does not expose TypeSafe credentials through the answer route', async () =
   assert.equal(result.statusCode, 200)
   assert.doesNotMatch(JSON.stringify(result.json), new RegExp(secret))
 })
-

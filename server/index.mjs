@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { handleAnswerRequest } from './answer-service.mjs'
 import { getContentType, SECURITY_HEADERS, resolveStaticPath } from './static-assets.mjs'
 import { resolveServerConfig } from './runtime-config.mjs'
+import { getReleaseId } from './release-id.mjs'
 
 const { host, port } = resolveServerConfig()
 const distRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../dist')
@@ -90,6 +91,7 @@ const server = http.createServer(async (request, response) => {
     sendJson(response, buildReady ? 200 : 503, {
       status: buildReady ? 'ok' : 'degraded',
       checks: { build: buildReady ? 'ok' : 'missing' },
+      release: getReleaseId(),
     })
     return
   }

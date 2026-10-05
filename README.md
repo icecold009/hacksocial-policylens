@@ -68,15 +68,19 @@ The app is intentionally small and dependency-light for an older laptop. The cur
 - `src/data/policies.js` contains the synthetic policy documents and source metadata.
 - `src/lib/retrieval.js` normalizes queries, ranks evidence candidates, and enforces empty, oversized, not-found, and ambiguity states.
 - `src/lib/answer-contract.js` builds and validates the response shape that the UI renders.
+- `src/lib/answer-request.js` bounds browser requests with a 12-second deadline and supports abort, retry, and recoverable error states.
+- `src/lib/evidence-copy.js` formats every returned passage with its section and source for the evidence-copy controls.
 - `src/data/policies.js` is the canonical runtime policy source. `scripts/ingest-policies.mjs` validates it and produces the reviewable normalized corpus at `data/processed/policies.json`, including the retrieval and fallback-answer fields used by the runtime.
 - `server/answer-service.mjs` exposes the local `POST /api/answer` boundary with request-size, method, JSON, policy, and response validation.
-- `server/provider.mjs` contains the optional environment-configured provider adapter, exact-citation check, timeout, bounded retry, and local fallback behavior.
+- `server/provider.mjs` contains the optional environment-configured provider adapter, incremental response-size limit, exact citation check, approved answer/next-step checks, timeout, bounded retry, and deterministic fallback behavior.
 - Development-only retrieval diagnostics can be requested through the server helper with `NODE_ENV=development` and `includeDiagnostics: true`; they contain candidate IDs and scores, never source quotes.
 - `server/static-assets.mjs` provides path-safe production asset serving and security headers for `npm start`.
 - `data/evaluation/questions.json` and `scripts/evaluate.mjs` provide the 25-case local evaluation.
 - `scripts/smoke.mjs` checks the production-style server health, app shell, grounded answer, and abstention path.
+- `scripts/browser-regression.mjs` exercises the primary answer, comparison, citation-copy, abstention, cancellation, timeout, rate-limit, keyboard, and 320px viewport flows using Playwright against the configured local ports.
+- `scripts/measure-latency.mjs` measures ten warmed synthetic API requests and reports median and p95 for the exact local or hosted URL supplied; it does not print question text.
 
-The measured results are recorded in [`docs/evaluation.md`](docs/evaluation.md). The answer service is deterministic by default; when all provider settings in `.env.example` are configured, it can request a constrained explanation server-side and falls back locally if the provider is unavailable or returns unsupported evidence. No provider credential is sent to the browser. Dependency and synthetic-source attribution is recorded in [`docs/attribution.md`](docs/attribution.md).
+The measured results are recorded in [`docs/evaluation.md`](docs/evaluation.md). The answer service is deterministic by default; when all provider settings in `.env.example` are configured, it accepts provider output only when the answer and next step exactly match trusted curated response text and every citation matches the selected passage. Otherwise it returns the deterministic answer. Provider response bodies are read incrementally and stopped at 32 KiB. No provider credential is sent to the browser. Dependency and synthetic-source attribution is recorded in [`docs/attribution.md`](docs/attribution.md).
 
 ## TypeSafe evidence reranking
 
@@ -86,7 +90,7 @@ The optional TypeSafe adapter evaluates only the deterministic top-three evidenc
 
 TypeSafe credentials stay in server environment variables. The request and response are size-limited, HTTPS is required outside local development, transient 429/5xx responses receive one bounded retry, candidate IDs are allowlisted, and development diagnostics contain IDs and probabilities only—not questions, policy text, credentials, or provider payloads. Primary and comparison policy requests are reranked independently.
 
-The answer API also applies an in-memory limit of 30 requests per client per minute for the local demo. It does not persist client identifiers or request content.
+The answer API applies a 30 requests per client per minute limit, caps request bodies at 8 KiB with a 15-second receive deadline, and allows eight in-flight answer computations per process. Body limits are enforced before an answer slot is acquired; timed-out and oversized bodies receive 408 or 413 and close the connection. A shared cap allows four concurrent/20 outbound provider attempts per minute across TypeSafe and the explanation provider. These counters are in-memory and reset when the process restarts; each service instance has its own counters. Behind a reverse proxy, only enable `POLICYLENS_TRUST_PROXY=true` when that proxy overwrites `X-Forwarded-For`. Clients behind one school NAT share the same direct-IP rate bucket. See [`docs/operations.md`](docs/operations.md) for data flows, limits, outage handling, and release checks.
 
 The answer contract is:
 
@@ -110,11 +114,11 @@ The answer contract is:
 ## Release status
 
 - Canonical branch: `main`
-- Main release checkpoint: `876cdcd621ee25e4eb23650313df30e04c2b02e3`
-- The prize-max slice contains five release commits after the reviewed hardening base and was promoted into `main` as one squashed release checkpoint.
+- Main head as of October 4, 2026: `c429b50c973d1f9776e6e966371a7e3171a4e286` (SEO foundation). This completion work is on a separate feature branch and has not been merged.
+- The previously recorded prize-max release checkpoint is `876cdcd621ee25e4eb23650313df30e04c2b02e3`.
 - Verification: `npm run verify`, `npm run smoke`, and the dependency audit are the required release gates.
-- Deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), deployed from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via Render deploy `dep-daas7v3bc2fs738i45e0` on August 31, 2026.
-- Hosted verification: `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed, and the hosted desktop flow covered a grounded answer, comparison, and unsupported-question abstention with no console warnings or errors. The free Render service may cold-start after inactivity.
+- Last recorded deployment: [https://hacksocial-policylens.onrender.com](https://hacksocial-policylens.onrender.com), from `main` commit `b9a636d639509919c1d318a876e923bc6fb391f6` via Render deploy `dep-daas7v3bc2fs738i45e0` on August 31, 2026. This deployment was not rechecked during the October 4 completion work.
+- Last recorded hosted verification on August 31, 2026: `npm run smoke -- --base-url https://hacksocial-policylens.onrender.com` passed, and the hosted desktop flow covered a grounded answer, comparison, and unsupported-question abstention with no console warnings or errors. Current hosted state remains unverified.
 - Submission: the existing HackSocial 2026 PolicyLens entry remains the single Devpost project to update.
 
 ## Privacy boundaries
@@ -139,6 +143,3 @@ The answer contract is:
 - [ ] Add the demo video and captured screenshots to the existing Devpost entry.
 
 The Devpost write-up and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They distinguish verified hosted evidence from the still-unpublished media assets.
-
-
-
