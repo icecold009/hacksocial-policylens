@@ -229,6 +229,54 @@ test('returns 408 and closes a real HTTP connection when the request body stalls
   }
 })
 
+test('handles a client disconnect during body ingestion without occupying answer capacity', async () => {
+  const apiConcurrencyLimiter = createConcurrencyLimiter(1)
+  let handlerError
+  let finishHandler
+  const handlerFinished = new Promise((resolve) => {
+    finishHandler = resolve
+  })
+  const server = http.createServer((request, response) => (
+    handleAnswerRequest(request, response, { apiConcurrencyLimiter, bodyTimeoutMs: 1_000 })
+      .catch((error) => {
+        handlerError = error
+      })
+      .finally(finishHandler)
+  ))
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+
+  let socket
+  try {
+    const { port } = server.address()
+    socket = net.createConnection({ host: '127.0.0.1', port }, () => {
+      socket.write('POST /api/answer HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{}')
+      setTimeout(() => socket.destroy(), 10)
+    })
+
+    let handlerTimeout
+    try {
+      await Promise.race([
+        handlerFinished,
+        new Promise((_, reject) => {
+          handlerTimeout = setTimeout(() => reject(new Error('The disconnected request handler did not finish.')), 1_000)
+        }),
+      ])
+    } finally {
+      clearTimeout(handlerTimeout)
+    }
+
+    assert.equal(handlerError, undefined)
+    assert.equal(apiConcurrencyLimiter.inFlight, 0)
+  } finally {
+    socket?.destroy()
+    await new Promise((resolve) => server.close(resolve))
+  }
+})
+
 test('uses forwarded client identity only when the proxy is explicitly trusted', () => {
   const request = { headers: { 'x-forwarded-for': '203.0.113.10, 10.0.0.2' }, socket: { remoteAddress: '10.0.0.2' } }
 

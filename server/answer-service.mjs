@@ -208,7 +208,6 @@ export async function readJsonBody(request, { timeoutMs = MAX_REQUEST_BODY_TIME_
       clearTimeout(timeout)
       request.removeListener('data', onData)
       request.removeListener('end', onEnd)
-      request.removeListener('error', onError)
       request.removeListener('aborted', onAborted)
     }
     const finish = (callback, value) => {
@@ -241,14 +240,16 @@ export async function readJsonBody(request, { timeoutMs = MAX_REQUEST_BODY_TIME_
     }
     const onError = (error) => finish(reject, error)
     const onAborted = () => fail(API_ERROR_CODES.INVALID_JSON, 'Request body ended before it was complete.')
+    const onClose = () => request.removeListener('error', onError)
 
     timeout = setTimeout(() => {
       fail(API_ERROR_CODES.REQUEST_TIMEOUT, 'Request body was not received before the deadline.')
     }, timeoutMs)
     request.on('data', onData)
     request.once('end', onEnd)
-    request.once('error', onError)
+    request.on('error', onError)
     request.once('aborted', onAborted)
+    request.once('close', onClose)
   })
 }
 
