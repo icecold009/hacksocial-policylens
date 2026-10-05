@@ -7,9 +7,11 @@ import { API_MAX_CONCURRENT_REQUESTS, createConcurrencyLimiter, createUpstreamCa
 import { getTypeSafeMode, requestTypeSafeRerank, resolveTypeSafeConfig, TYPESAFE_SELECTION_VERSION } from './typesafe-reranker.mjs'
 
 export const MAX_REQUEST_BYTES = 8 * 1024
+export const MAX_REQUEST_BODY_TIME_MS = 15_000
 
 export const API_ERROR_CODES = Object.freeze({
   INVALID_JSON: 'INVALID_JSON',
+  REQUEST_TIMEOUT: 'REQUEST_TIMEOUT',
   REQUEST_TOO_LARGE: 'REQUEST_TOO_LARGE',
   INVALID_BODY: 'INVALID_BODY',
   INVALID_POLICY_ID: 'INVALID_POLICY_ID',
@@ -191,28 +193,63 @@ export async function answerQuestion(payload, options = {}) {
   return { statusCode: 200, body: responseWithDiagnostics }
 }
 
-export async function readJsonBody(request) {
-  const chunks = []
-  let totalBytes = 0
+export async function readJsonBody(request, { timeoutMs = MAX_REQUEST_BODY_TIME_MS } = {}) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
+    throw new RangeError('The request body timeout must be a positive integer.')
+  }
 
-  for await (const chunk of request) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-    totalBytes += buffer.length
-    if (totalBytes > MAX_REQUEST_BYTES) {
-      const error = new Error('Request body exceeds the configured limit.')
-      error.code = API_ERROR_CODES.REQUEST_TOO_LARGE
-      throw error
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    let totalBytes = 0
+    let settled = false
+    let timeout
+
+    const cleanup = () => {
+      clearTimeout(timeout)
+      request.removeListener('data', onData)
+      request.removeListener('end', onEnd)
+      request.removeListener('error', onError)
+      request.removeListener('aborted', onAborted)
     }
-    chunks.push(buffer)
-  }
+    const finish = (callback, value) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      callback(value)
+    }
+    const fail = (code, message) => {
+      request.pause?.()
+      const error = new Error(message)
+      error.code = code
+      finish(reject, error)
+    }
+    const onData = (chunk) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      totalBytes += buffer.length
+      if (totalBytes > MAX_REQUEST_BYTES) {
+        fail(API_ERROR_CODES.REQUEST_TOO_LARGE, 'Request body exceeds the configured limit.')
+        return
+      }
+      chunks.push(buffer)
+    }
+    const onEnd = () => {
+      try {
+        finish(resolve, JSON.parse(Buffer.concat(chunks).toString('utf8')))
+      } catch {
+        fail(API_ERROR_CODES.INVALID_JSON, 'Request body is not valid JSON.')
+      }
+    }
+    const onError = (error) => finish(reject, error)
+    const onAborted = () => fail(API_ERROR_CODES.INVALID_JSON, 'Request body ended before it was complete.')
 
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'))
-  } catch {
-    const error = new Error('Request body is not valid JSON.')
-    error.code = API_ERROR_CODES.INVALID_JSON
-    throw error
-  }
+    timeout = setTimeout(() => {
+      fail(API_ERROR_CODES.REQUEST_TIMEOUT, 'Request body was not received before the deadline.')
+    }, timeoutMs)
+    request.on('data', onData)
+    request.once('end', onEnd)
+    request.once('error', onError)
+    request.once('aborted', onAborted)
+  })
 }
 
 function sendJson(response, statusCode, body, extraHeaders = {}) {
@@ -268,40 +305,59 @@ export async function handleAnswerRequest(request, response, options = {}) {
   const declaredLength = Number(request.headers['content-length'])
   if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
     const result = createErrorResult(API_ERROR_CODES.REQUEST_TOO_LARGE, 'The request body is too large.', 413)
-    sendJson(response, result.statusCode, result.body, corsHeaders)
+    response.shouldKeepAlive = false
+    sendJson(response, result.statusCode, result.body, { ...corsHeaders, Connection: 'close' })
+    return
+  }
+
+  let payload
+  try {
+    payload = await readJsonBody(request, { timeoutMs: options.bodyTimeoutMs ?? MAX_REQUEST_BODY_TIME_MS })
+  } catch (error) {
+    if (response.destroyed || response.headersSent) return
+
+    const errorCode = [API_ERROR_CODES.REQUEST_TOO_LARGE, API_ERROR_CODES.REQUEST_TIMEOUT].includes(error?.code)
+      ? error.code
+      : API_ERROR_CODES.INVALID_JSON
+    const statusCode = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE
+      ? 413
+      : errorCode === API_ERROR_CODES.REQUEST_TIMEOUT
+        ? 408
+        : 400
+    const reason = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE
+      ? 'The request body is too large.'
+      : errorCode === API_ERROR_CODES.REQUEST_TIMEOUT
+        ? 'The request body was not received before the deadline.'
+        : 'The request body is not valid JSON.'
+    const result = createErrorResult(errorCode, reason, statusCode)
+    if (statusCode === 408 || statusCode === 413) response.shouldKeepAlive = false
+    sendJson(response, result.statusCode, result.body, {
+      ...corsHeaders,
+      ...(statusCode === 408 || statusCode === 413 ? { Connection: 'close' } : {}),
+    })
     return
   }
 
   const requestLimiter = options.apiConcurrencyLimiter ?? apiConcurrencyLimiter
   const releaseRequest = requestLimiter.acquire()
   if (!releaseRequest) {
-    request.resume?.()
     const result = createErrorResult(API_ERROR_CODES.SERVICE_BUSY, 'The answer service is busy. Try again shortly.', 503)
     sendJson(response, result.statusCode, result.body, { ...corsHeaders, 'Retry-After': '1' })
     return
   }
 
   try {
-    try {
-      const result = await answerQuestion(await readJsonBody(request), {
-        environment,
-        fetchImpl: options.fetchImpl,
-        providerTimeoutMs: options.providerTimeoutMs,
-        typesafeFetchImpl: options.typesafeFetchImpl,
-        typesafeTimeoutMs: options.typesafeTimeoutMs,
-        includeDiagnostics: options.includeDiagnostics,
-        upstreamCallGuard: options.upstreamCallGuard,
-      })
-      sendJson(response, result.statusCode, result.body, corsHeaders)
-    } catch (error) {
-      const errorCode = error?.code === API_ERROR_CODES.REQUEST_TOO_LARGE ? API_ERROR_CODES.REQUEST_TOO_LARGE : API_ERROR_CODES.INVALID_JSON
-      const statusCode = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 413 : 400
-      const reason = errorCode === API_ERROR_CODES.REQUEST_TOO_LARGE ? 'The request body is too large.' : 'The request body is not valid JSON.'
-      const result = createErrorResult(errorCode, reason, statusCode)
-      sendJson(response, result.statusCode, result.body, corsHeaders)
-    }
+    const result = await answerQuestion(payload, {
+      environment,
+      fetchImpl: options.fetchImpl,
+      providerTimeoutMs: options.providerTimeoutMs,
+      typesafeFetchImpl: options.typesafeFetchImpl,
+      typesafeTimeoutMs: options.typesafeTimeoutMs,
+      includeDiagnostics: options.includeDiagnostics,
+      upstreamCallGuard: options.upstreamCallGuard,
+    })
+    sendJson(response, result.statusCode, result.body, corsHeaders)
   } finally {
     releaseRequest()
   }
 }
-

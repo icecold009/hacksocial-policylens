@@ -90,7 +90,7 @@ The optional TypeSafe adapter evaluates only the deterministic top-three evidenc
 
 TypeSafe credentials stay in server environment variables. The request and response are size-limited, HTTPS is required outside local development, transient 429/5xx responses receive one bounded retry, candidate IDs are allowlisted, and development diagnostics contain IDs and probabilities only—not questions, policy text, credentials, or provider payloads. Primary and comparison policy requests are reranked independently.
 
-The answer API applies a 30 requests per client per minute limit, an eight in-flight request limit per process, and a shared cap of four concurrent/20 outbound provider attempts per minute across TypeSafe and the explanation provider. These counters are in-memory and reset when the process restarts; each service instance has its own counters. Behind a reverse proxy, only enable `POLICYLENS_TRUST_PROXY=true` when that proxy overwrites `X-Forwarded-For`. Clients behind one school NAT share the same direct-IP rate bucket. See [`docs/operations.md`](docs/operations.md) for data flows, limits, outage handling, and release checks.
+The answer API applies a 30 requests per client per minute limit, caps request bodies at 8 KiB with a 15-second receive deadline, and allows eight in-flight answer computations per process. Body limits are enforced before an answer slot is acquired; timed-out and oversized bodies receive 408 or 413 and close the connection. A shared cap allows four concurrent/20 outbound provider attempts per minute across TypeSafe and the explanation provider. These counters are in-memory and reset when the process restarts; each service instance has its own counters. Behind a reverse proxy, only enable `POLICYLENS_TRUST_PROXY=true` when that proxy overwrites `X-Forwarded-For`. Clients behind one school NAT share the same direct-IP rate bucket. See [`docs/operations.md`](docs/operations.md) for data flows, limits, outage handling, and release checks.
 
 The answer contract is:
 
@@ -143,6 +143,3 @@ The answer contract is:
 - [ ] Add the demo video and captured screenshots to the existing Devpost entry.
 
 The Devpost write-up and timed recording outline are in [`devpost-submission.md`](devpost-submission.md) and [`docs/demo-script.md`](docs/demo-script.md). They distinguish verified hosted evidence from the still-unpublished media assets.
-
-
-

@@ -19,12 +19,16 @@ Limits are in-memory and apply independently in each running Node process:
 | Limit | Default |
 | --- | ---: |
 | Requests per client key | 30 per minute |
-| In-flight answer requests | 8 |
+| Request body size | 8 KiB |
+| Request body receive deadline | 15 seconds |
+| In-flight answer computations | 8 |
 | Concurrent upstream fetch attempts shared by both adapters | 4 |
 | Upstream fetch attempts shared by both adapters | 20 per minute |
 | Browser answer deadline | 12 seconds |
 | TypeSafe timeout / attempts | 3 seconds / 2 |
 | Explanation provider timeout / attempts | 6 seconds / 2 |
+
+The request body is fully read and size-checked before an answer-computation slot is acquired. An incomplete body receives 408; a body over the size limit receives 413. Both responses close the connection.
 
 The upstream budget counts each actual fetch attempt, including retries; it is a request-volume cap, not a monetary spend limit. Configure spend limits with the provider as well. Process restarts reset these counters, and multiple service instances each have an independent budget. Use a shared rate-limit store before scaling horizontally.
 
